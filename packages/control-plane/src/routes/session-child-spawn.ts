@@ -24,6 +24,20 @@ import { sessionRoute, type SessionRouteContext } from "./session-route";
 const logger = createLogger("router:session-child-spawn");
 const MAX_SPAWN_DEPTH = 2;
 
+function resolveChildReasoningEffort(
+  model: string,
+  requestedEffort: string | undefined,
+  inheritedEffort: string | null
+): string | null {
+  if (requestedEffort && isValidReasoningEffort(model, requestedEffort)) {
+    return requestedEffort;
+  }
+  if (inheritedEffort && isValidReasoningEffort(model, inheritedEffort)) {
+    return inheritedEffort;
+  }
+  return null;
+}
+
 async function handleSpawnChild(
   request: Request,
   env: Env,
@@ -89,10 +103,11 @@ async function handleSpawnChild(
     return error(`Invalid model "${body.model}". Valid models: ${VALID_MODELS.join(", ")}`, 400);
   }
   const model = getValidModelOrDefault(rawModel);
-  const reasoningEffort =
-    body.reasoningEffort && isValidReasoningEffort(model, body.reasoningEffort)
-      ? body.reasoningEffort
-      : spawnContext.reasoningEffort;
+  const reasoningEffort = resolveChildReasoningEffort(
+    model,
+    body.reasoningEffort,
+    spawnContext.reasoningEffort
+  );
 
   const childDepth = parentDepth + 1;
   const childId = generateId();

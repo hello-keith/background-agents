@@ -54,7 +54,10 @@ describe("handleSpawnChild prompt enqueue handling", () => {
     integrationSettingsMocks.resolveSandboxSettings.mockResolvedValue({});
   });
 
-  async function makeRequest(env: Record<string, unknown>): Promise<Response> {
+  async function makeRequest(
+    env: Record<string, unknown>,
+    body: Record<string, unknown> = { title: "Child task", prompt: "Do the thing" }
+  ): Promise<Response> {
     const token = await generateInternalToken(env.INTERNAL_CALLBACK_SECRET as string);
 
     return handleRequest(
@@ -64,7 +67,7 @@ describe("handleSpawnChild prompt enqueue handling", () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title: "Child task", prompt: "Do the thing" }),
+        body: JSON.stringify(body),
       }),
       env as never
     );
@@ -109,6 +112,53 @@ describe("handleSpawnChild prompt enqueue handling", () => {
     expect(childEntry?.id).toBe(payload.sessionId);
     expect(childEntry?.userId).toBe("canonical-user-123");
     expect(store.updateStatus).not.toHaveBeenCalled();
+  });
+
+  it("does not inherit parent reasoning effort when invalid for the child model", async () => {
+    const store = makeStore();
+    vi.mocked(SessionIndexStore).mockImplementation(function () {
+      return store as never;
+    });
+
+    const parentStub: DurableObjectStub = {
+      fetch: vi.fn(async () =>
+        Response.json({
+          ...spawnContext,
+          model: "anthropic/claude-sonnet-4-5",
+          reasoningEffort: "max",
+        })
+      ),
+    } as never;
+
+    const childStub: DurableObjectStub = {
+      fetch: vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname;
+        if (path === SessionInternalPaths.init) return Response.json({ status: "ok" });
+        if (path === SessionInternalPaths.prompt)
+          return Response.json({ messageId: "msg-1", status: "queued" });
+        return Response.json({ error: "unexpected" }, { status: 404 });
+      }),
+    } as never;
+
+    const env = {
+      INTERNAL_CALLBACK_SECRET: "test-internal-secret",
+      DB: {},
+      SESSION: {
+        idFromName: (name: string) => name,
+        get: (id: string) => (id === parentId ? parentStub : childStub),
+      },
+    };
+
+    const response = await makeRequest(env, {
+      title: "Child task",
+      prompt: "Do the thing",
+      model: "openai/gpt-5.3-codex",
+    });
+
+    expect(response.status).toBe(201);
+    const childEntry = store.create.mock.calls[0]?.[0];
+    expect(childEntry?.model).toBe("openai/gpt-5.3-codex");
+    expect(childEntry?.reasoningEffort).toBeNull();
   });
 
   it("returns 400 when child specifies an invalid model", async () => {
