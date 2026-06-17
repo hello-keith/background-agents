@@ -67,6 +67,7 @@ The control plane provides:
 | `/sessions/:id/messages`        | GET       | List messages                  |
 | `/sessions/:id/pr`              | POST      | Create pull request            |
 | `/sessions/:id/scm-credentials` | POST      | Broker sandbox git credentials |
+| `/sessions/:id/tunnel-urls`     | GET       | Return sandbox tunnel URLs     |
 | `/sessions/:id/ws-token`        | POST      | Generate WebSocket token       |
 | `/sessions/:id/archive`         | POST      | Archive session                |
 | `/sessions/:id/unarchive`       | POST      | Unarchive session              |
@@ -127,6 +128,26 @@ Common failures are `401` for a missing or invalid sandbox token, `404` when the
 exists, and `5xx` when provider configuration or upstream token minting fails. Source-control
 providers must implement `generateCredentialHelperAuth` before helper-backed sandbox git auth works
 for that provider.
+
+### Tunnel URLs
+
+`GET /sessions/:id/tunnel-urls` is a sandbox-authenticated fallback for retrieving the control
+plane's resolved Modal tunnel URLs. In-sandbox clients should read `/workspace/.tunnels.env` when it
+is present and use this route when that file is missing or incomplete after the bounded wait.
+
+Call it with `Authorization: Bearer <SANDBOX_AUTH_TOKEN>`. It returns:
+
+```json
+{
+  "tunnelUrls": {
+    "3000": "https://example.modal.run"
+  }
+}
+```
+
+The response is `200` with an empty map when tunnels are not resolved yet, `401` for a missing or
+invalid sandbox token, `404` when the session has no sandbox, and `500` when the stored tunnel URL
+payload is malformed. Responses use `Cache-Control: no-store`.
 
 ### Repositories
 

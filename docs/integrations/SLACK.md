@@ -12,6 +12,28 @@ notification controls and safety notes are covered near the end.
 
 ---
 
+## Slack App Setup
+
+For self-hosted deployments, create the Slack app before deployment and finish URL setup after the
+Slack bot worker is live.
+
+1. In **OAuth & Permissions**, add these bot token scopes: `app_mentions:read`, `chat:write`,
+   `channels:history`, `channels:read`, `groups:history`, `groups:read`, `im:history`, `im:read`,
+   `reactions:write`, and `users:read`.
+2. Install or reinstall the app, then put the bot token in `slack_bot_token` and the signing secret
+   in `slack_signing_secret`.
+3. In **App Home**, turn on the **Home** tab.
+4. In **Event Subscriptions**, set the request URL to
+   `https://open-inspect-slack-bot-{deployment_name}.YOUR-SUBDOMAIN.workers.dev/events` and
+   subscribe to `app_home_opened`, `app_mention`, and `message.im`.
+5. In **Interactivity & Shortcuts**, set the request URL to
+   `https://open-inspect-slack-bot-{deployment_name}.YOUR-SUBDOMAIN.workers.dev/interactions`.
+6. Invite the bot to any channel where it should respond to mentions or post agent notifications.
+
+Reinstall the app after changing scopes so Slack issues a token with the new permissions.
+
+---
+
 ## Quick Start
 
 1. Invite the Open-Inspect Slack app to any channel where you want to use it.
