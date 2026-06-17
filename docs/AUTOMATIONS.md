@@ -11,7 +11,7 @@ Trigger types:
 | **Schedule**        | Run on a cron schedule                    | Available    |
 | **Inbound Webhook** | Trigger from any system with an HTTP POST | Available    |
 | **Sentry Alert**    | Trigger from a Sentry Custom Integration  | Available    |
-| **GitHub Event**    | Trigger on GitHub activity                | Planned      |
+| **GitHub Event**    | Trigger on GitHub activity                | Available    |
 | **Linear Event**    | Trigger on Linear activity                | Planned      |
 
 Common use cases include nightly dependency updates, reacting to deploy or incident events, triaging
@@ -29,7 +29,7 @@ Start by choosing a **Trigger Type**. The rest of the form adjusts based on that
 
 | Field            | Description                                                                                                                                                                                |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Trigger Type** | How the automation starts: schedule, inbound webhook, or Sentry alert.                                                                                                                     |
+| **Trigger Type** | How the automation starts: schedule, inbound webhook, Sentry alert, or GitHub event.                                                                                                      |
 | **Name**         | A short label for the automation (max 200 characters). Appears in the automations list and in session titles prefixed with `[Auto]`.                                                       |
 | **Repository**   | The GitHub repository to run against. Only repositories installed on the GitHub App are available. Cannot be changed after creation.                                                       |
 | **Instructions** | The prompt sent to the coding agent each time the automation fires (max 10,000 characters). Write this as you would a normal session prompt and reference the trigger context when useful. |
@@ -41,7 +41,7 @@ Start by choosing a **Trigger Type**. The rest of the form adjusts based on that
 | **Branch**     | The base branch for each session. Defaults to the repository's default branch (usually `main`).   |
 | **Model**      | The AI model to use. Defaults to the system default model.                                        |
 | **Reasoning**  | Optional reasoning level for models that support it.                                              |
-| **Conditions** | Optional trigger filters for event-driven automations such as inbound webhooks and Sentry alerts. |
+| **Conditions** | Optional trigger filters for event-driven automations such as inbound webhooks, Sentry alerts, and GitHub events. |
 
 ### Trigger-Specific Fields
 
@@ -50,6 +50,7 @@ Start by choosing a **Trigger Type**. The rest of the form adjusts based on that
 | **Schedule**        | **Schedule** and **Timezone**               |
 | **Inbound Webhook** | No extra required fields                    |
 | **Sentry Alert**    | **Event Type** and **Sentry Client Secret** |
+| **GitHub Event**    | **Event Type**                              |
 
 For non-schedule automations, schedule fields are not used.
 
@@ -112,10 +113,12 @@ incoming payload together.
 
 ### Filtering with Conditions
 
-Webhook automations support one condition type: **JSONPath Filter**.
+Conditions make event-driven automations run only for specific event shapes or values. Every
+condition must pass for the automation to run.
 
-Use conditions when you want the automation to run only for specific payload shapes or values, such
-as:
+#### Webhook Conditions
+
+Webhook automations support one condition type: **JSONPath Filter**. Use it for cases such as:
 
 - Only production events
 - Only deploy failures
@@ -153,6 +156,22 @@ Example filters:
 | Run only for production          | `$.environment eq "production"` |
 | Run only for failed deploys      | `$.status eq "failed"`          |
 | Run only when a field is present | `$.pull_request.number exists`  |
+
+#### GitHub Conditions
+
+GitHub event automations support these condition types:
+
+| Condition             | Operators             | Meaning                                                  |
+| --------------------- | --------------------- | -------------------------------------------------------- |
+| Head branch           | `glob_match`, `exact` | PR source branch or check-suite head branch              |
+| Target branch         | `glob_match`, `exact` | PR base branch. Non-PR events do not match this filter   |
+| Label                 | `any_of`, `none_of`   | GitHub labels on supported issue or PR events            |
+| Path glob             | `any_match`           | Changed file paths match at least one glob               |
+| Actor                 | `include`, `exclude`  | GitHub username that triggered the event                 |
+| Check conclusion      | `eq`                  | Check-suite conclusion such as `success` or `failure`    |
+
+Use **Head branch** for the branch that contains proposed changes. Use **Target branch** for the PR
+merge base, such as `main` or `release/*`.
 
 ### Idempotency and Duplicate Deliveries
 

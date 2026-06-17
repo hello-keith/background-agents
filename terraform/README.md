@@ -37,14 +37,27 @@ in:
 - encryption and callback secrets
 - at least one access-control allowlist
 
-Keep `terraform.tfvars` local and uncommitted.
+Keep `terraform.tfvars` and `backend.tfvars` local and uncommitted.
 
 ## First Deployment
 
 From the production environment directory:
 
 ```bash
-terraform init
+wrangler r2 bucket create open-inspect-terraform-state
+cp backend.tfvars.example backend.tfvars
+```
+
+Fill `backend.tfvars` with the R2 access key, secret key, and account endpoint:
+
+```hcl
+endpoints = {
+  s3 = "https://<cloudflare_account_id>.r2.cloudflarestorage.com"
+}
+```
+
+```bash
+terraform init -backend-config=backend.tfvars
 terraform plan
 terraform apply
 ```

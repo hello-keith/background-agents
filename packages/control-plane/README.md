@@ -52,25 +52,37 @@ The control plane provides:
 
 ### Sessions
 
-| Endpoint                        | Method    | Description                    |
-| ------------------------------- | --------- | ------------------------------ |
-| `/sessions`                     | GET       | List user's sessions           |
-| `/sessions`                     | POST      | Create new session             |
-| `/sessions/:id`                 | GET       | Get session state              |
-| `/sessions/:id`                 | DELETE    | Delete session                 |
-| `/sessions/:id/prompt`          | POST      | Enqueue prompt                 |
-| `/sessions/:id/stop`            | POST      | Stop execution                 |
-| `/sessions/:id/ws`              | WebSocket | Real-time connection           |
-| `/sessions/:id/events`          | GET       | Paginated events               |
-| `/sessions/:id/artifacts`       | GET       | List artifacts                 |
-| `/sessions/:id/participants`    | GET/POST  | Manage participants            |
-| `/sessions/:id/messages`        | GET       | List messages                  |
-| `/sessions/:id/pr`              | POST      | Create pull request            |
-| `/sessions/:id/scm-credentials` | POST      | Broker sandbox git credentials |
-| `/sessions/:id/tunnel-urls`     | GET       | Return sandbox tunnel URLs     |
-| `/sessions/:id/ws-token`        | POST      | Generate WebSocket token       |
-| `/sessions/:id/archive`         | POST      | Archive session                |
-| `/sessions/:id/unarchive`       | POST      | Unarchive session              |
+| Endpoint                                 | Method    | Description                    |
+| ---------------------------------------- | --------- | ------------------------------ |
+| `/sessions`                              | GET       | List user's sessions           |
+| `/sessions`                              | POST      | Create new session             |
+| `/sessions/:id`                          | GET       | Get session state              |
+| `/sessions/:id`                          | DELETE    | Delete session                 |
+| `/sessions/:id/prompt`                   | POST      | Enqueue prompt                 |
+| `/sessions/:id/stop`                     | POST      | Stop execution                 |
+| `/sessions/:id/ws`                       | WebSocket | Real-time connection           |
+| `/sessions/:id/events`                   | GET       | Paginated events               |
+| `/sessions/:id/artifacts`                | GET       | List artifacts                 |
+| `/sessions/:id/participants`             | GET/POST  | Manage participants            |
+| `/sessions/:id/messages`                 | GET       | List messages                  |
+| `/sessions/:id/children`                 | GET       | List child sessions            |
+| `/sessions/:id/children/:childId`        | GET       | Get child session details      |
+| `/sessions/:id/children/:childId/cancel` | POST      | Cancel child session           |
+| `/sessions/:id/pr`                       | POST      | Create pull request            |
+| `/sessions/:id/scm-credentials`          | POST      | Broker sandbox git credentials |
+| `/sessions/:id/tunnel-urls`              | GET       | Return sandbox tunnel URLs     |
+| `/sessions/:id/ws-token`                 | POST      | Generate WebSocket token       |
+| `/sessions/:id/archive`                  | POST      | Archive session                |
+| `/sessions/:id/unarchive`                | POST      | Unarchive session              |
+
+`GET /sessions` accepts `status`, `excludeStatus`, `limit`, `offset`, and repeatable `createdBy`
+query parameters. `createdBy` values must be canonical 32-character lowercase hex user IDs;
+duplicates are ignored. The web `/api/sessions` proxy also accepts `createdBy=me` and resolves it to
+the current user's canonical ID before forwarding. The control-plane endpoint rejects `me` directly.
+
+`GET /sessions/:id/children/:childId` accepts `include=result` for the final assistant response and
+`include=trajectory` for persisted events. Use `trajectoryLimit` and `trajectoryCursor` to page
+through long child runs.
 
 ### Provider Identities
 

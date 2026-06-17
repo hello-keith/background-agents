@@ -230,7 +230,12 @@ Agents can decompose work into parallel child sessions:
 
 - `spawn-task` creates a child session in its own sandbox and returns immediately
 - Parent continues working while children run in parallel on separate branches
-- `get-task-status` and `cancel-task` for coordination
+- `get-task-status` without a task ID lists children; with a task ID it returns session, sandbox,
+  artifacts, and recent events
+- `includeResponse` retrieves the child's final assistant response when available
+- `includeTrajectory` adds a paginated event history; use `trajectoryLimit` and `trajectoryCursor`
+  to page through longer runs
+- `cancel-task` stops a running child task
 - `maxConcurrentChildSessions` defaults to 5 active children per parent
 - `maxTotalChildSessions` defaults to 15 total children per parent
 - Repo sandbox settings override global defaults. For Modal resources, set `cpuCores` to a positive

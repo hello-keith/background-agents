@@ -91,6 +91,21 @@ cd terraform/environments/production
 cp terraform.tfvars.example terraform.tfvars
 ```
 
+Create the R2 bucket used for Terraform state, then copy the backend config:
+
+```bash
+wrangler r2 bucket create open-inspect-terraform-state
+cp backend.tfvars.example backend.tfvars
+```
+
+Fill `backend.tfvars` with the R2 access key, secret key, and endpoint:
+
+```hcl
+endpoints = {
+  s3 = "https://<cloudflare_account_id>.r2.cloudflarestorage.com"
+}
+```
+
 For the first apply, keep:
 
 ```hcl
@@ -101,7 +116,7 @@ enable_service_bindings        = false
 Run:
 
 ```bash
-terraform init
+terraform init -backend-config=backend.tfvars
 terraform plan
 terraform apply
 ```
