@@ -61,7 +61,7 @@ if needed.
 | ------------- | ------------------------------------------------- |
 | Messages      | Prompts you've sent and their metadata            |
 | Events        | Tool calls, token streams, status updates         |
-| Artifacts     | PRs created, screenshots captured                 |
+| Artifacts     | PRs created, screenshots, and video recordings    |
 | Participants  | Users who have joined the session                 |
 | Sandbox state | Reference to the current sandbox and its snapshot |
 
@@ -374,7 +374,7 @@ Sessions stream events to all connected clients via WebSocket.
 | `sandbox_spawning` | Sandbox is being created                      |
 | `sandbox_ready`    | Sandbox is ready to accept prompts            |
 | `sandbox_event`    | Tool call, token stream, or other agent event |
-| `artifact_created` | PR created, screenshot captured               |
+| `artifact_created` | PR, screenshot, or video artifact created     |
 | `presence_update`  | User joined or left the session               |
 | `session_status`   | Session state changed                         |
 

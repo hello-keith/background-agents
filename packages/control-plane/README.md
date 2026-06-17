@@ -66,10 +66,13 @@ The control plane provides:
 | `/sessions/:id/artifacts`                | GET       | List artifacts                 |
 | `/sessions/:id/participants`             | GET/POST  | Manage participants            |
 | `/sessions/:id/messages`                 | GET       | List messages                  |
+| `/sessions/:id/media`                    | POST      | Upload sandbox media artifact  |
+| `/sessions/:id/media/:artifactId`        | GET       | Stream media artifact          |
 | `/sessions/:id/children`                 | GET       | List child sessions            |
 | `/sessions/:id/children/:childId`        | GET       | Get child session details      |
 | `/sessions/:id/children/:childId/cancel` | POST      | Cancel child session           |
 | `/sessions/:id/pr`                       | POST      | Create pull request            |
+| `/sessions/:id/openai-token-refresh`     | POST      | Refresh sandbox OpenAI token   |
 | `/sessions/:id/scm-credentials`          | POST      | Broker sandbox git credentials |
 | `/sessions/:id/tunnel-urls`              | GET       | Return sandbox tunnel URLs     |
 | `/sessions/:id/ws-token`                 | POST      | Generate WebSocket token       |
@@ -96,6 +99,30 @@ newest-first as `{ events, cursor, hasMore }`; each event includes `id`, `type`,
 and `createdAt`. `limit` defaults to 50 and is capped at 200. New clients should pass the returned
 composite cursor (`<createdAt>:<url-encoded-event-id>`) to fetch the next page; legacy numeric
 timestamp cursors are still accepted for older clients.
+
+### Session Media
+
+`POST /sessions/:id/media` is a sandbox-authenticated multipart upload endpoint. It requires `file`
+and `artifactType` (`screenshot` or `video`) and returns:
+
+```json
+{
+  "artifactId": "artifact-1",
+  "objectKey": "sessions/session-1/media/artifact-1.png"
+}
+```
+
+Screenshot uploads accept `image/png`, `image/jpeg`, or `image/webp`, must be 10 MiB or smaller, and
+may include `caption`, `sourceUrl`, `fullPage`, `annotated`, and `viewport` JSON. Video uploads
+accept `video/mp4`, must be 100 MiB or smaller, and require `caption`, `durationMs`,
+`recordingStartedAt`, `recordingEndedAt`, `dimensions` JSON, and `truncated`; optional `hasAudio`
+must be `false`. Sessions are limited to 100 screenshots and 20 videos. Uploads persist an artifact
+row and matching `artifact` event on the active prompt; they return `409` when no prompt is active.
+
+`GET /sessions/:id/media/:artifactId` requires internal control-plane authentication and streams
+stored screenshot or video artifacts from object storage. It returns the stored content type, `ETag`,
+`Accept-Ranges: bytes`, and `Content-Length`; valid `Range` requests return `206` with
+`Content-Range`, and unsatisfiable ranges return `416`.
 
 ### Provider Identities
 
@@ -135,6 +162,24 @@ email through `UserStore.resolveOrCreateUser`.
 
 When `headBranch` is omitted, control-plane resolves it from session state and finally falls back to
 the generated `open-inspect/<session>` branch.
+
+### OpenAI Token Refresh
+
+`POST /sessions/:id/openai-token-refresh` is a sandbox-authenticated endpoint used by the sandbox to
+refresh OpenAI OAuth access tokens without exposing stored refresh tokens. It returns:
+
+```json
+{
+  "access_token": "<access-token>",
+  "expires_in": 3600,
+  "account_id": "acct_123"
+}
+```
+
+The route reads repo-scoped OpenAI OAuth secrets first, then global secrets. Common failures are
+`401` for a missing or invalid sandbox token, `404` when the session or
+`OPENAI_OAUTH_REFRESH_TOKEN` is missing, `500` when secret storage is not configured, and `502` when
+the upstream OpenAI refresh fails.
 
 ### SCM Credentials
 
@@ -217,7 +262,7 @@ payload is malformed. Responses use `Cache-Control: no-store`.
 | `sandbox_error`         | Sandbox error occurred         |
 | `sandbox_warning`       | Sandbox warning message        |
 | `sandbox_restored`      | Restored from snapshot         |
-| `artifact_created`      | New artifact (PR, screenshot)  |
+| `artifact_created`      | New artifact event             |
 | `snapshot_saved`        | Filesystem snapshot saved      |
 | `session_status`        | Session status change          |
 | `session_title`         | Session title update           |
@@ -225,6 +270,9 @@ payload is malformed. Responses use `Cache-Control: no-store`.
 
 `sandbox_dashboard_url` carries `{ url }` and is emitted after a sandbox provider object is created
 or restored.
+
+`artifact_created` carries `{ artifact }`. Artifact types include PRs, screenshots, videos,
+previews, and branches.
 
 `session_title` carries `{ title }`. Sandbox-generated titles only fill an empty session title; a
 manual title update uses the same broadcast after validation.
@@ -265,7 +313,7 @@ Each session gets its own SQLite database with:
 - `participants`: Users with encrypted GitHub tokens
 - `messages`: Prompt queue and history
 - `events`: Agent events (tool calls, tokens)
-- `artifacts`: PRs, screenshots, previews
+- `artifacts`: PRs, screenshots, videos, previews, branches
 - `sandbox`: selected backend sandbox state
 - `ws_client_mapping`: WebSocket ID to participant mapping (for hibernation recovery)
 
