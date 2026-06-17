@@ -58,6 +58,7 @@ The control plane provides:
 | `/sessions`                              | POST      | Create new session             |
 | `/sessions/:id`                          | GET       | Get session state              |
 | `/sessions/:id`                          | DELETE    | Delete session                 |
+| `/sessions/:id/title`                    | PATCH     | Update session title           |
 | `/sessions/:id/prompt`                   | POST      | Enqueue prompt                 |
 | `/sessions/:id/stop`                     | POST      | Stop execution                 |
 | `/sessions/:id/ws`                       | WebSocket | Real-time connection           |
@@ -79,6 +80,12 @@ The control plane provides:
 query parameters. `createdBy` values must be canonical 32-character lowercase hex user IDs;
 duplicates are ignored. The web `/api/sessions` proxy also accepts `createdBy=me` and resolves it to
 the current user's canonical ID before forwarding. The control-plane endpoint rejects `me` directly.
+
+`PATCH /sessions/:id/title` requires internal control-plane authentication and accepts JSON with
+`userId` and `title`. `userId` must identify a session participant. Titles are trimmed, must be
+non-empty, and must be 200 characters or fewer. The endpoint returns `{ title }`, returns `400` for
+invalid request data, returns `403` when the user is not a participant, and returns `404` when the
+session is missing. Successful updates broadcast `session_title` to connected clients.
 
 `GET /sessions/:id/children/:childId` accepts `include=result` for the final assistant response and
 `include=trajectory` for persisted events. Use `trajectoryLimit` and `trajectoryCursor` to page
