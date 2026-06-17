@@ -68,7 +68,13 @@ Base image definition with:
 
 1. Install Modal CLI: `pip install modal`
 2. Authenticate: `modal setup`
-3. Create secrets via Modal CLI:
+3. Choose the Modal environment. Terraform sets `MODAL_ENVIRONMENT` for secrets and deploys:
+
+```bash
+export MODAL_ENVIRONMENT=main
+```
+
+4. Create secrets via Modal CLI:
 
 ```bash
 # LLM API keys
@@ -102,6 +108,7 @@ pip install -e ".[dev]"
 
 ```bash
 # Deploy the app (recommended)
+export MODAL_ENVIRONMENT=main
 modal deploy deploy.py
 
 # Alternative: deploy the src package directly
@@ -119,7 +126,10 @@ modal run src/
 The control plane communicates with Modal via HTTP endpoints. All endpoints (except health)
 require HMAC authentication via the `Authorization` header.
 
-Endpoint URLs follow the pattern: `https://{workspace}--open-inspect-{endpoint}.modal.run`
+Endpoint URLs follow the pattern `https://{workspace-slug}--open-inspect-{endpoint}.modal.run`.
+The workspace slug is `{workspace}` when `modal_environment_web_suffix` is empty and
+`{workspace}-{suffix}` when it is set. `modal_environment` selects the Modal CLI and dashboard
+environment; the web suffix only controls endpoint hostnames.
 
 ### Endpoints
 
@@ -134,7 +144,7 @@ Endpoint URLs follow the pattern: `https://{workspace}--open-inspect-{endpoint}.
 ### Example: Create Sandbox
 
 ```bash
-curl -X POST "https://${WORKSPACE}--open-inspect-api-create-sandbox.modal.run" \
+curl -X POST "https://${WORKSPACE_SLUG}--open-inspect-api-create-sandbox.modal.run" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -149,7 +159,7 @@ curl -X POST "https://${WORKSPACE}--open-inspect-api-create-sandbox.modal.run" \
 ### Example: Health Check
 
 ```bash
-curl "https://${WORKSPACE}--open-inspect-api-health.modal.run"
+curl "https://${WORKSPACE_SLUG}--open-inspect-api-health.modal.run"
 # {"success": true, "data": {"status": "healthy", "service": "open-inspect-modal"}}
 ```
 
@@ -171,7 +181,7 @@ Set via Modal secrets:
 | Criterion | Test Method |
 |-----------|-------------|
 | App deploys successfully | `modal deploy deploy.py` completes without errors |
-| Health endpoint responds | `curl https://{workspace}--open-inspect-api-health.modal.run` |
+| Health endpoint responds | `curl https://{workspace-slug}--open-inspect-api-health.modal.run` |
 | Sandbox creation works | POST to `api-create-sandbox` returns success |
 | Git sync completes | Verify HEAD matches origin after sandbox start |
 | Snapshot/restore works | Take snapshot, restore, verify workspace state |

@@ -83,9 +83,11 @@ The bot is deployed via Terraform as a standalone Cloudflare Worker alongside th
 
 The existing GitHub App needs these additions:
 
-**Permissions**: `Pull requests: Read & write`, `Issues: Read & write`
+**Permissions**: `Pull requests: Read & write`, `Issues: Read & write`. Add `Checks: Read-only`
+when using `check_suite.completed` automations.
 
-**Event subscriptions**: `Pull request`, `Issue comment`, `Pull request review comment`
+**Event subscriptions**: `Pull request`, `Issue comment`, `Pull request review comment`, `Issues`.
+Add `Check suite` when using `check_suite.completed` automations.
 
 **Webhook URL**: `https://open-inspect-github-bot-{suffix}.{account}.workers.dev/webhooks/github`
 
@@ -117,6 +119,13 @@ access model and can authenticate auxiliary private repos on the configured SCM 
 
 All events are processed asynchronously via `executionCtx.waitUntil()`. The webhook endpoint returns
 200 immediately after signature verification and delivery dedupe.
+
+The webhook endpoint also forwards normalized events to the control plane for GitHub Event
+automations. Supported automation event types are `pull_request.opened`,
+`pull_request.synchronize`, `pull_request.closed`, `issue_comment.created`,
+`pull_request_review_comment.created`, `check_suite.completed`, `issues.opened`, and
+`issues.labeled`. Events that do not start a bot session directly can still trigger automations after
+normalization.
 
 ### Handler Flows
 

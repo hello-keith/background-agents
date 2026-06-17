@@ -84,6 +84,12 @@ the current user's canonical ID before forwarding. The control-plane endpoint re
 `include=trajectory` for persisted events. Use `trajectoryLimit` and `trajectoryCursor` to page
 through long child runs.
 
+`GET /sessions/:id/events` accepts `cursor`, `limit`, `type`, and `message_id`. Events are returned
+newest-first as `{ events, cursor, hasMore }`; each event includes `id`, `type`, `data`, `messageId`,
+and `createdAt`. `limit` defaults to 50 and is capped at 200. New clients should pass the returned
+composite cursor (`<createdAt>:<url-encoded-event-id>`) to fetch the next page; legacy numeric
+timestamp cursors are still accepted for older clients.
+
 ### Provider Identities
 
 | Endpoint                                          | Method | Description                              |
@@ -207,10 +213,14 @@ payload is malformed. Responses use `Cache-Control: no-store`.
 | `artifact_created`      | New artifact (PR, screenshot)  |
 | `snapshot_saved`        | Filesystem snapshot saved      |
 | `session_status`        | Session status change          |
+| `session_title`         | Session title update           |
 | `error`                 | Error occurred                 |
 
 `sandbox_dashboard_url` carries `{ url }` and is emitted after a sandbox provider object is created
 or restored.
+
+`session_title` carries `{ title }`. Sandbox-generated titles only fill an empty session title; a
+manual title update uses the same broadcast after validation.
 
 ## Development
 

@@ -203,6 +203,7 @@ Schedule recurring tasks or react to external events - no human in the loop:
 - **Cron schedules** - Hourly, daily, weekly, monthly, or custom 5-field cron with timezone support
 - **Sentry alerts** - Auto-triage on new errors, regressions, or critical metric alerts
 - **Inbound webhooks** - JSONPath condition filters to gate which payloads spawn sessions
+- **GitHub events** - Start sessions from PR, issue, review-comment, and CI check-suite activity
 - Auto-pause after 3 consecutive failures, manual trigger button, full run history
 
 See **[docs/AUTOMATIONS.md](docs/AUTOMATIONS.md)** for setup instructions.

@@ -108,7 +108,7 @@ const sharedConditions = {
 } satisfies Partial<ConditionRegistry>;
 
 /**
- * Assembled condition registry — every key in ConditionConfigMap has a handler.
+ * Assembled condition registry. Every key in ConditionConfigMap has a handler.
  */
 export const conditionRegistry: ConditionRegistry = {
   ...sharedConditions,
@@ -118,7 +118,8 @@ export const conditionRegistry: ConditionRegistry = {
 
 /**
  * All registered trigger sources. The UI reads this for the trigger type selector.
- * Only Sentry and Webhook are active in Phase 2a/2b.
+ * Sentry, Webhook, and GitHub sources are active; Schedule is handled separately and Linear is not
+ * registered yet.
  */
 export const triggerSources: TriggerSourceDefinition[] = [
   sentrySource,
