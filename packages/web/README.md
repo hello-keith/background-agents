@@ -101,6 +101,11 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 NEXT_PUBLIC_GOOGLE_ENABLED=
 
+# Branding (optional)
+NEXT_PUBLIC_APP_NAME=Open-Inspect       # Defaults to Open-Inspect
+NEXT_PUBLIC_APP_SHORT_NAME=Inspect      # Sidebar label; defaults to Inspect
+NEXT_PUBLIC_APP_ICON_URL=               # Logo/favicon URL; blank uses the built-in icon
+
 # NextAuth
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your_random_secret  # Generate: openssl rand -base64 32
@@ -121,6 +126,11 @@ NEXT_PUBLIC_WS_URL=ws://localhost:8787
 > email allowlists match verified emails from any auth provider. For Terraform-managed production
 > deploys, Terraform also fails validation unless you set at least one allowlist or explicitly opt in
 > with `unsafe_allow_all_users = true`.
+
+> **Branding**: `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_SHORT_NAME`, and
+> `NEXT_PUBLIC_APP_ICON_URL` are read at build time. Restart `npm run dev` after changing them
+> locally. Terraform-managed production deploys set them from `app_name`, `app_short_name`, and
+> `app_icon_url`.
 
 ### Development
 
