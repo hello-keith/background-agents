@@ -104,7 +104,7 @@ class SandboxSupervisor:
         self.sandbox_token = os.environ.get("SANDBOX_AUTH_TOKEN", "")
         self.repo_owner = os.environ.get("REPO_OWNER", "")
         self.repo_name = os.environ.get("REPO_NAME", "")
-        self.vcs_host = os.environ.get("VCS_HOST", "github.com")
+        self.vcs_host = "github.com"
         # Note: VCS credentials are no longer captured at sandbox start. Git
         # operations authenticate per-call via the system-wide credential
         # helper (`/usr/local/bin/oi-git-credentials`), which fetches fresh
@@ -281,7 +281,7 @@ class SandboxSupervisor:
         Older workspaces/images (from before the credential-helper migration)
         may embed a GitHub App installation token in the `origin` URL. Modal
         snapshot restores receive a fresh fallback token, but long-running
-        sandboxes and Daytona persistent resumes can outlive embedded tokens.
+        sandboxes can outlive embedded tokens.
         Normalizing `origin` keeps git fetches routed through the helper.
 
         Returns False on failure — callers must short-circuit, since a

@@ -12,7 +12,6 @@ Updated: 2026-01-15 to fix Sandbox.create API
 
 import asyncio
 import json
-import os
 import secrets
 import time
 from dataclasses import dataclass
@@ -296,20 +295,12 @@ class SandboxManager:
         the static restore token, while genuine user-provided tokens remain
         authoritative.
         """
-        scm_provider = os.environ.get("SCM_PROVIDER", "github")
-        if scm_provider == "bitbucket":
-            env_vars["VCS_HOST"] = "bitbucket.org"
-            env_vars["VCS_CLONE_USERNAME"] = "x-token-auth"
-        elif scm_provider == "gitlab":
-            env_vars["VCS_HOST"] = "gitlab.com"
-            env_vars["VCS_CLONE_USERNAME"] = "oauth2"
-        else:
-            env_vars["VCS_HOST"] = "github.com"
-            env_vars["VCS_CLONE_USERNAME"] = "x-access-token"
+        env_vars["VCS_HOST"] = "github.com"
+        env_vars["VCS_CLONE_USERNAME"] = "x-access-token"
 
         if clone_token:
             env_vars["VCS_CLONE_TOKEN"] = clone_token
-            if include_github_cli_aliases and scm_provider == "github":
+            if include_github_cli_aliases:
                 has_user_github_cli_token = any(
                     env_vars.get(key) for key in ("GH_TOKEN", "GITHUB_TOKEN", "GITHUB_APP_TOKEN")
                 )

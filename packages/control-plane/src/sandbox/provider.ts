@@ -1,8 +1,7 @@
 /**
  * Sandbox provider interface.
  *
- * Defines a pluggable abstraction for sandbox providers (Modal, Fly.io, Docker, etc.)
- * enabling unit testing and future provider support.
+ * Defines the sandbox provider abstraction used by Modal.
  */
 
 import type { SandboxSettings } from "@open-inspect/shared";
@@ -191,7 +190,7 @@ export interface SnapshotResult {
  * Configuration for resuming a previously stopped sandbox.
  */
 export interface ResumeConfig {
-  /** Provider's internal object ID (e.g., Daytona sandbox ID) */
+  /** Provider's internal object ID */
   providerObjectId: string;
   /** Session ID for context */
   sessionId: string;
@@ -231,7 +230,7 @@ export interface ResumeResult {
  * Configuration for explicitly stopping a sandbox.
  */
 export interface StopConfig {
-  /** Provider's internal object ID (e.g., Daytona sandbox ID) */
+  /** Provider's internal object ID */
   providerObjectId: string;
   /** Session ID for context */
   sessionId: string;

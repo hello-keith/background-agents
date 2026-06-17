@@ -131,7 +131,7 @@ def _is_authorized_request(input_lines: dict[str, str]) -> tuple[bool, str]:
     may clone sibling private repositories that the installation can access.
 
     * protocol must be ``https`` (never hand a token to a plaintext remote);
-    * host must equal the configured ``VCS_HOST``.
+    * host must be ``github.com``.
 
     Returns ``(authorized, reason)`` so the caller can log the rejection.
     """
@@ -142,7 +142,7 @@ def _is_authorized_request(input_lines: dict[str, str]) -> tuple[bool, str]:
     requested_host = input_lines.get("host", "").strip().lower()
     if not requested_host:
         return False, "no host provided"
-    expected_host = os.environ.get("VCS_HOST", "github.com").strip().lower()
+    expected_host = "github.com"
     if requested_host != expected_host:
         return False, f"host={requested_host!r} (expected {expected_host!r})"
 
@@ -281,8 +281,6 @@ def _gh_wrapper_should_mint(env: Mapping[str, str]) -> bool:
     override, because the manager only sets the marker when it injected both
     values itself.
     """
-    if env.get("VCS_HOST", "github.com").strip().lower() != "github.com":
-        return False  # non-github deployment: never touch gh's own auth
     if env.get("GH_TOKEN"):
         return False  # user-owned; the manager never injects GH_TOKEN
     if env.get("OI_GITHUB_TOKEN_IS_FALLBACK") == "1":

@@ -2,7 +2,7 @@
  * Sandbox backend selection utilities.
  */
 
-export type SandboxBackendName = "modal" | "daytona" | "vercel";
+export type SandboxBackendName = "modal";
 
 /**
  * Resolve the configured sandbox backend.
@@ -16,14 +16,6 @@ export function resolveSandboxBackendName(value: string | undefined): SandboxBac
     return "modal";
   }
 
-  if (normalized === "daytona") {
-    return "daytona";
-  }
-
-  if (normalized === "vercel") {
-    return "vercel";
-  }
-
   throw new Error(`Unsupported SANDBOX_PROVIDER: ${value}`);
 }
 
@@ -32,6 +24,6 @@ export function isModalSandboxBackend(value: string | undefined): boolean {
 }
 
 export function supportsRepoImageBackend(value: string | undefined): boolean {
-  const backend = resolveSandboxBackendName(value);
-  return backend === "modal" || backend === "vercel";
+  resolveSandboxBackendName(value);
+  return true;
 }

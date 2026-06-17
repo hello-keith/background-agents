@@ -33,24 +33,22 @@ describe("sandbox-provider", () => {
     expect(supportsRepoImages()).toBe(true);
   });
 
-  it("uses the public provider value when present", async () => {
-    process.env.NEXT_PUBLIC_SANDBOX_PROVIDER = " vercel ";
-    process.env.SANDBOX_PROVIDER = "daytona";
+  it("accepts modal from the public provider value when present", async () => {
+    process.env.NEXT_PUBLIC_SANDBOX_PROVIDER = " modal ";
+    process.env.SANDBOX_PROVIDER = "modal";
 
     const { getPublicSandboxProvider, supportsRepoImages } = await loadProvider();
 
-    expect(getPublicSandboxProvider()).toBe("vercel");
+    expect(getPublicSandboxProvider()).toBe("modal");
     expect(supportsRepoImages()).toBe(true);
   });
 
-  it("disables repo images for daytona", async () => {
-    delete process.env.NEXT_PUBLIC_SANDBOX_PROVIDER;
-    process.env.SANDBOX_PROVIDER = "daytona";
+  it("throws for old sandbox provider values", async () => {
+    process.env.NEXT_PUBLIC_SANDBOX_PROVIDER = "unsupported-a";
 
-    const { getPublicSandboxProvider, supportsRepoImages } = await loadProvider();
+    const { getPublicSandboxProvider } = await loadProvider();
 
-    expect(getPublicSandboxProvider()).toBe("daytona");
-    expect(supportsRepoImages()).toBe(false);
+    expect(() => getPublicSandboxProvider()).toThrow("Invalid sandbox provider: unsupported-a");
   });
 
   it("throws for unsupported providers", async () => {

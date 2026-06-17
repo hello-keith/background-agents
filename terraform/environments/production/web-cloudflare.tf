@@ -1,11 +1,9 @@
 # =============================================================================
-# Web App — Cloudflare Workers via OpenNext (when web_platform = "cloudflare")
+# Web App - Cloudflare Workers via OpenNext
 # =============================================================================
 
 # Build the web app with OpenNext for Cloudflare Workers
 resource "null_resource" "web_app_cloudflare_build" {
-  count = var.web_platform == "cloudflare" ? 1 : 0
-
   triggers = {
     always_run = timestamp()
   }
@@ -17,7 +15,7 @@ resource "null_resource" "web_app_cloudflare_build" {
     environment = {
       # NEXT_PUBLIC_* vars must be set at build time (inlined into client bundle)
       NEXT_PUBLIC_WS_URL           = local.ws_url
-      NEXT_PUBLIC_SANDBOX_PROVIDER = var.sandbox_provider
+      NEXT_PUBLIC_SANDBOX_PROVIDER = "modal"
       NEXT_PUBLIC_APP_NAME         = var.app_name
       NEXT_PUBLIC_APP_SHORT_NAME   = var.app_short_name
       NEXT_PUBLIC_APP_ICON_URL     = var.app_icon_url
@@ -29,8 +27,6 @@ resource "null_resource" "web_app_cloudflare_build" {
 # Upload secrets to the Cloudflare Worker (only re-runs when secrets change).
 # Must run after deploy — wrangler secret put requires the worker to exist.
 resource "null_resource" "web_app_cloudflare_secrets" {
-  count = var.web_platform == "cloudflare" ? 1 : 0
-
   triggers = {
     secrets_hash = sha256(join(",", [
       var.github_client_secret,
@@ -61,7 +57,6 @@ resource "null_resource" "web_app_cloudflare_secrets" {
 # Generate a production wrangler config with the correct service binding name.
 # This avoids mutating the checked-in wrangler.toml (which defaults to local dev).
 resource "local_file" "web_app_wrangler_production" {
-  count    = var.web_platform == "cloudflare" ? 1 : 0
   filename = "${var.project_root}/packages/web/wrangler.production.toml"
   content  = <<-TOML
     name = "open-inspect-web-${local.name_suffix}"
@@ -75,7 +70,7 @@ resource "local_file" "web_app_wrangler_production" {
     NEXTAUTH_URL = "${local.web_app_url}"
     CONTROL_PLANE_URL = "${local.control_plane_url}"
     NEXT_PUBLIC_WS_URL = "${local.ws_url}"
-    NEXT_PUBLIC_SANDBOX_PROVIDER = "${var.sandbox_provider}"
+    NEXT_PUBLIC_SANDBOX_PROVIDER = "modal"
     NEXT_PUBLIC_APP_NAME = "${var.app_name}"
     NEXT_PUBLIC_APP_SHORT_NAME = "${var.app_short_name}"
     NEXT_PUBLIC_APP_ICON_URL = "${var.app_icon_url}"
@@ -97,8 +92,6 @@ resource "local_file" "web_app_wrangler_production" {
 
 # Deploy the OpenNext bundle to Cloudflare Workers
 resource "null_resource" "web_app_cloudflare_deploy" {
-  count = var.web_platform == "cloudflare" ? 1 : 0
-
   triggers = {
     always_run = timestamp()
   }

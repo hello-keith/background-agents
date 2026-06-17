@@ -1,27 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { computeHmacHex } from "@open-inspect/shared";
+import { generateInternalToken } from "../auth/internal";
 import { createRequestMetrics } from "../db/instrumented-d1";
 import { repoImageRoutes } from "./repo-images";
 import type { RepoImageProvider } from "../db/repo-images";
 import type { Env } from "../types";
 import type { RequestContext, Route } from "./shared";
-import type * as VercelClientModule from "../sandbox/providers/vercel/client";
-
-const vercelClient = vi.hoisted(() => ({
-  snapshotSession: vi.fn(),
-  deleteSnapshot: vi.fn(),
-  stopSession: vi.fn(),
-}));
-
-const VERCEL_CALLBACK_TOKEN = "a".repeat(64);
-
-vi.mock("../sandbox/providers/vercel/client", async (importOriginal) => {
-  const actual = await importOriginal<typeof VercelClientModule>();
-  return {
-    ...actual,
-    createVercelSandboxClient: vi.fn(() => vercelClient),
-  };
-});
 
 interface RepoImageRow {
   id: string;
@@ -41,23 +24,13 @@ interface RepoImageRow {
   created_at: number;
 }
 
-function createRepoImageDb(row: RepoImageRow): D1Database {
+function createRepoImageDb(
+  row: RepoImageRow,
+  oldReady?: { id: string; provider_image_id: string }
+): D1Database {
   const prepare = (sql: string) => ({
     bind: (...args: unknown[]) => ({
       first: async () => {
-        if (sql.includes("SELECT id, provider, provider_session_id")) {
-          return row.id === args[0] && row.provider === args[1]
-            ? {
-                id: row.id,
-                provider: row.provider,
-                provider_session_id: row.provider_session_id,
-                status: row.status,
-                callback_token_hash: row.callback_token_hash,
-                callback_token_expires_at: row.callback_token_expires_at,
-                callback_token_used_at: row.callback_token_used_at,
-              }
-            : null;
-        }
         if (sql.includes("SELECT repo_owner, repo_name, provider, base_branch")) {
           return row.id === args[0] && row.provider === args[1] && row.status === "building"
             ? {
@@ -69,21 +42,18 @@ function createRepoImageDb(row: RepoImageRow): D1Database {
             : null;
         }
         if (sql.includes("SELECT id, provider_image_id")) {
-          return null;
+          return oldReady ?? null;
         }
         return null;
       },
       run: async () => {
-        if (sql.includes("UPDATE repo_images SET callback_token_used_at")) {
-          row.callback_token_used_at = Number(args[0]);
-        } else if (sql.includes("UPDATE repo_images SET status = 'ready'")) {
+        if (sql.includes("UPDATE repo_images SET status = 'ready'")) {
           row.status = "ready";
           row.provider_image_id = String(args[0]);
           row.base_sha = String(args[1]);
           row.build_duration_seconds = Number(args[2]);
-        } else if (sql.includes("UPDATE repo_images SET status = 'failed'")) {
-          row.status = "failed";
-          row.error_message = String(args[0]);
+        } else if (sql.includes("DELETE FROM repo_images")) {
+          oldReady = undefined;
         }
         return { meta: { changes: 1 } };
       },
@@ -126,51 +96,42 @@ function createEnv(db: D1Database): Env {
   return {
     DB: db,
     INTERNAL_CALLBACK_SECRET: "callback-secret",
-    SANDBOX_PROVIDER: "vercel",
-    VERCEL_TOKEN: "vercel-token",
-    VERCEL_PROJECT_ID: "project-123",
+    SANDBOX_PROVIDER: "modal",
+    MODAL_API_SECRET: "modal-secret",
+    MODAL_WORKSPACE: "surface",
     TOKEN_ENCRYPTION_KEY: "token-key",
     DEPLOYMENT_NAME: "test",
   } as Env;
 }
 
+function createBuildingRow(): RepoImageRow {
+  return {
+    id: "build-1",
+    repo_owner: "acme",
+    repo_name: "repo",
+    provider: "modal",
+    provider_session_id: "modal-session-1",
+    base_branch: "main",
+    provider_image_id: "",
+    status: "building",
+    base_sha: "",
+    build_duration_seconds: null,
+    error_message: null,
+    callback_token_hash: null,
+    callback_token_expires_at: null,
+    callback_token_used_at: null,
+    created_at: Date.now(),
+  };
+}
+
 describe("repo image routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vercelClient.snapshotSession.mockResolvedValue({
-      snapshot: { id: "vercel-snapshot-1", status: "created", createdAt: 123 },
-      session: {
-        id: "vercel-session-1",
-        status: "stopped",
-        createdAt: 123,
-        cwd: "/workspace",
-        timeout: 1800000,
-      },
-    });
-    vercelClient.stopSession.mockResolvedValue(undefined);
   });
 
-  it("snapshots Vercel repo image builds outside the build sandbox before marking ready", async () => {
-    const waitUntilPromises: Promise<unknown>[] = [];
-    const token = VERCEL_CALLBACK_TOKEN;
-    const tokenHash = await computeHmacHex(`repo-image-callback:${token}`, "callback-secret");
-    const row: RepoImageRow = {
-      id: "build-1",
-      repo_owner: "acme",
-      repo_name: "repo",
-      provider: "vercel",
-      provider_session_id: "vercel-session-1",
-      base_branch: "main",
-      provider_image_id: "",
-      status: "building",
-      base_sha: "",
-      build_duration_seconds: null,
-      error_message: null,
-      callback_token_hash: tokenHash,
-      callback_token_expires_at: Date.now() + 60_000,
-      callback_token_used_at: null,
-      created_at: Date.now(),
-    };
+  it("marks Modal repo image builds ready from authenticated callbacks", async () => {
+    const row = createBuildingRow();
+    const token = await generateInternalToken("callback-secret");
 
     const response = await buildCompleteRoute().handler(
       new Request("https://test.local/repo-images/build-complete", {
@@ -181,77 +142,7 @@ describe("repo image routes", () => {
         },
         body: JSON.stringify({
           build_id: "build-1",
-          provider_session_id: "vercel-session-1",
-          base_sha: "abc123",
-          build_duration_seconds: 42.25,
-        }),
-      }),
-      createEnv(createRepoImageDb(row)),
-      [] as unknown as RegExpMatchArray,
-      createContext(waitUntilPromises)
-    );
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ok: true, snapshotPending: true });
-
-    expect(waitUntilPromises).toHaveLength(1);
-    await Promise.all(waitUntilPromises);
-
-    expect(vercelClient.snapshotSession).toHaveBeenCalledWith(
-      "vercel-session-1",
-      { expirationMs: 0 },
-      expect.objectContaining({
-        request_id: "request-1",
-        trace_id: "trace-1",
-        sandbox_id: "vercel-session-1",
-      })
-    );
-    expect(vercelClient.stopSession).toHaveBeenCalledWith(
-      "vercel-session-1",
-      expect.objectContaining({
-        request_id: "request-1",
-        trace_id: "trace-1",
-        sandbox_id: "vercel-session-1",
-      })
-    );
-    expect(row.status).toBe("ready");
-    expect(row.provider_image_id).toBe("vercel-snapshot-1");
-    expect(row.base_sha).toBe("abc123");
-    expect(row.build_duration_seconds).toBe(42.25);
-    expect(row.callback_token_used_at).toEqual(expect.any(Number));
-  });
-
-  it("rejects Vercel callbacks for an unbound provider session", async () => {
-    const token = VERCEL_CALLBACK_TOKEN;
-    const tokenHash = await computeHmacHex(`repo-image-callback:${token}`, "callback-secret");
-    const row: RepoImageRow = {
-      id: "build-1",
-      repo_owner: "acme",
-      repo_name: "repo",
-      provider: "vercel",
-      provider_session_id: "vercel-session-1",
-      base_branch: "main",
-      provider_image_id: "",
-      status: "building",
-      base_sha: "",
-      build_duration_seconds: null,
-      error_message: null,
-      callback_token_hash: tokenHash,
-      callback_token_expires_at: Date.now() + 60_000,
-      callback_token_used_at: null,
-      created_at: Date.now(),
-    };
-
-    const response = await buildCompleteRoute().handler(
-      new Request("https://test.local/repo-images/build-complete", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          build_id: "build-1",
-          provider_session_id: "other-vercel-session",
+          provider_image_id: "modal-image-1",
           base_sha: "abc123",
           build_duration_seconds: 42.25,
         }),
@@ -261,9 +152,43 @@ describe("repo image routes", () => {
       createContext([])
     );
 
-    expect(response.status).toBe(401);
-    expect(vercelClient.snapshotSession).not.toHaveBeenCalled();
-    expect(row.status).toBe("building");
-    expect(row.callback_token_used_at).toBeNull();
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true, replacedImageId: null });
+    expect(row.status).toBe("ready");
+    expect(row.provider_image_id).toBe("modal-image-1");
+    expect(row.base_sha).toBe("abc123");
+    expect(row.build_duration_seconds).toBe(42.25);
+  });
+
+  it("rejects callbacks that target a build that is not accepting completion", async () => {
+    const row = createBuildingRow();
+    row.status = "failed";
+    const token = await generateInternalToken("callback-secret");
+
+    const response = await buildCompleteRoute().handler(
+      new Request("https://test.local/repo-images/build-complete", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          build_id: "build-1",
+          provider_image_id: "modal-image-1",
+          base_sha: "abc123",
+          build_duration_seconds: 42.25,
+        }),
+      }),
+      createEnv(createRepoImageDb(row)),
+      [] as unknown as RegExpMatchArray,
+      createContext([])
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "Build is not accepting completion",
+    });
+    expect(row.status).toBe("failed");
+    expect(row.provider_image_id).toBe("");
   });
 });

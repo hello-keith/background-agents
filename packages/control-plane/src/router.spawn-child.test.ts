@@ -92,7 +92,6 @@ describe("handleSpawnChild prompt enqueue handling", () => {
 
     const env = {
       INTERNAL_CALLBACK_SECRET: "test-internal-secret",
-      SCM_PROVIDER: "github",
       DB: {},
       SESSION: {
         idFromName: (name: string) => name,
@@ -124,7 +123,6 @@ describe("handleSpawnChild prompt enqueue handling", () => {
 
     const env = {
       INTERNAL_CALLBACK_SECRET: "test-internal-secret",
-      SCM_PROVIDER: "github",
       DB: {},
       SESSION: {
         idFromName: (name: string) => name,
@@ -173,7 +171,6 @@ describe("handleSpawnChild prompt enqueue handling", () => {
 
     const env = {
       INTERNAL_CALLBACK_SECRET: "test-internal-secret",
-      SCM_PROVIDER: "github",
       DB: {},
       SESSION: {
         idFromName: (name: string) => name,
@@ -212,7 +209,6 @@ describe("handleSpawnChild prompt enqueue handling", () => {
 
     const env = {
       INTERNAL_CALLBACK_SECRET: "test-internal-secret",
-      SCM_PROVIDER: "github",
       DB: {},
       SESSION: {
         idFromName: (name: string) => name,
@@ -240,7 +236,6 @@ describe("handleSpawnChild prompt enqueue handling", () => {
 
     const env = {
       INTERNAL_CALLBACK_SECRET: "test-internal-secret",
-      SCM_PROVIDER: "github",
       DB: {},
       SESSION: {
         idFromName: (name: string) => name,
@@ -294,7 +289,6 @@ describe("handleSpawnChild prompt enqueue handling", () => {
 
     const env = {
       INTERNAL_CALLBACK_SECRET: "test-internal-secret",
-      SCM_PROVIDER: "github",
       DB: {},
       SESSION: {
         idFromName: (name: string) => name,

@@ -70,11 +70,11 @@ All services use the same error fields:
 
 Wide events use `outcome` to indicate result:
 
-- `success` — completed normally
-- `error` — failed with an error
-- `rejected` — denied before processing (auth, validation)
-- `timeout` — timed out
-- `cancelled` — cancelled by caller
+- `success` - completed normally
+- `error` - failed with an error
+- `rejected` - denied before processing (auth, validation)
+- `timeout` - timed out
+- `cancelled` - cancelled by caller
 
 ---
 
@@ -90,19 +90,14 @@ Wide events use `outcome` to indicate result:
 
 #### Repo Image Builds (`component: "router"`)
 
-| Event                                    | Level | Key Fields                                                                        | Description                                                                |
-| ---------------------------------------- | ----- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `repo_image.build_triggered`             | info  | `build_id`, `repo_owner`, `repo_name`, `trace_id`, `request_id`                   | Repo image build accepted by the active backend                            |
-| `repo_image.build_complete_received`     | info  | `build_id`, `provider_session_id`, `base_sha`, `trace_id`, `request_id`           | Vercel runtime reported success before snapshot                            |
-| `repo_image.vercel_snapshot_start`       | info  | `build_id`, `provider_session_id`, `trace_id`, `request_id`                       | Control plane started snapshotting Vercel build                            |
-| `repo_image.build_complete`              | info  | `build_id`, `provider_image_id`, `replaced_image_id`, `trace_id`                  | Repo image marked ready                                                    |
-| `repo_image.build_failed`                | info  | `build_id`, `error_message`, `trace_id`, `request_id`                             | Runtime reported a failed repo image build                                 |
-| `repo_image.callback_auth_failed`        | warn  | `build_id`, `provider_session_id`, `trace_id`, `request_id`                       | Repo image callback had invalid auth, replay, or session binding           |
-| `repo_image.vercel_snapshot_failed`      | error | `build_id`, `provider_session_id`, `error`, `duration_ms`, `trace_id`             | Vercel success callback arrived but snapshot did not produce an image      |
-| `repo_image.vercel_snapshot_error`       | error | `build_id`, `provider_session_id`, `error`, `duration_ms`, `trace_id`             | Vercel completion path threw before ready state                            |
-| `repo_image.vercel_snapshot_not_applied` | warn  | `build_id`, `provider_session_id`, `provider_image_id`, `duration_ms`, `trace_id` | Vercel snapshot succeeded after the build row stopped accepting completion |
-| `repo_image.trigger_mark_failed_error`   | warn  | `build_id`, `error`, `trace_id`, `request_id`                                     | Build trigger failed and the route could not mark the build failed         |
-| `repo_image.trigger_error`               | error | `repo_owner`, `repo_name`, `error`, `trace_id`, `request_id`                      | Manual or scheduled build trigger failed                                   |
+| Event                                  | Level | Key Fields                                                       | Description                                                        |
+| -------------------------------------- | ----- | ---------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `repo_image.build_triggered`           | info  | `build_id`, `repo_owner`, `repo_name`, `trace_id`, `request_id`  | Repo image build accepted by Modal                                 |
+| `repo_image.build_complete`            | info  | `build_id`, `provider_image_id`, `replaced_image_id`, `trace_id` | Repo image marked ready                                            |
+| `repo_image.build_failed`              | info  | `build_id`, `error_message`, `trace_id`, `request_id`            | Runtime reported a failed repo image build                         |
+| `repo_image.callback_auth_failed`      | warn  | `trace_id`, `request_id`                                         | Repo image callback had invalid internal auth                      |
+| `repo_image.trigger_mark_failed_error` | warn  | `build_id`, `error`, `trace_id`, `request_id`                    | Build trigger failed and the route could not mark the build failed |
+| `repo_image.trigger_error`             | error | `repo_owner`, `repo_name`, `error`, `trace_id`, `request_id`     | Manual or scheduled build trigger failed                           |
 
 #### Session Durable Object (`component: "session-do"`)
 
@@ -130,11 +125,9 @@ Wide events use `outcome` to indicate result:
 
 #### Provider Clients
 
-| Event                    | Level | Key Fields                                                                      | Description                               |
-| ------------------------ | ----- | ------------------------------------------------------------------------------- | ----------------------------------------- |
-| `modal.request`          | info  | `endpoint`, `session_id`, `sandbox_id`, `http_status`, `duration_ms`, `outcome` | One per control-plane -> Modal call       |
-| `vercel_sandbox.request` | info  | `endpoint`, `session_id`, `http_status`, `duration_ms`, `outcome`               | One per control-plane -> Vercel API call  |
-| `daytona.create_sandbox` | info  | `sandbox_id`, `target`, `duration_ms`, `outcome`                                | Daytona sandbox create/restore API result |
+| Event           | Level | Key Fields                                                                      | Description                         |
+| --------------- | ----- | ------------------------------------------------------------------------------- | ----------------------------------- |
+| `modal.request` | info  | `endpoint`, `session_id`, `sandbox_id`, `http_status`, `duration_ms`, `outcome` | One per control-plane -> Modal call |
 
 ---
 
@@ -191,8 +184,8 @@ Wide events use `outcome` to indicate result:
 | Event                     | Level | Key Fields                      | Description               |
 | ------------------------- | ----- | ------------------------------- | ------------------------- |
 | `opencode.session.ensure` | info  | `opencode_session_id`, `action` | Session created or loaded |
-| `opencode.start`          | info  | —                               | OpenCode process started  |
-| `opencode.ready`          | info  | —                               | OpenCode health check OK  |
+| `opencode.start`          | info  | -                               | OpenCode process started  |
+| `opencode.ready`          | info  | -                               | OpenCode health check OK  |
 | `opencode.crash`          | error | `exit_code`, `restart_count`    | OpenCode process died     |
 
 ---
@@ -287,9 +280,9 @@ service="control-plane" msg="ws.connect" ws_type="sandbox" session_id="<SESSION_
 
 Check `outcome` and `reject_reason` on `ws.connect`. Common reasons:
 
-- `sandbox_id_mismatch` — sandbox was replaced (stale sandbox reconnecting)
-- `token_mismatch` — auth token doesn't match
-- `sandbox_stopped` — session already terminated
+- `sandbox_id_mismatch` - sandbox was replaced (stale sandbox reconnecting)
+- `token_mismatch` - auth token doesn't match
+- `sandbox_stopped` - session already terminated
 
 ### "Why did a sandbox spawn fail?"
 

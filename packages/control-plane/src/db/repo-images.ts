@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "@open-inspect/shared";
 
-export type RepoImageProvider = "modal" | "vercel";
+export type RepoImageProvider = "modal";
 
 export interface RepoImageBuild {
   id: string;

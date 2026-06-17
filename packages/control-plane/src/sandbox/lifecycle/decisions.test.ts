@@ -369,14 +369,14 @@ describe("evaluateSpawnDecision", () => {
     expect(DEFAULT_SPAWN_CONFIG.readyWaitMs).toBe(60000);
   });
 
-  // ---- Persistent resume (Daytona-style) ----
+  // ---- Persistent resume support ----
 
   it('returns "resume" when provider supports persistent resume and sandbox is stopped with providerObjectId', () => {
     const now = Date.now();
     const state: SandboxState = {
       status: "stopped",
       createdAt: now - 120000,
-      providerObjectId: "daytona-abc123",
+      providerObjectId: "provider-abc123",
       snapshotImageId: null,
       hasActiveWebSocket: false,
     };
@@ -385,7 +385,7 @@ describe("evaluateSpawnDecision", () => {
 
     expect(decision.action).toBe("resume");
     if (decision.action === "resume") {
-      expect(decision.providerObjectId).toBe("daytona-abc123");
+      expect(decision.providerObjectId).toBe("provider-abc123");
     }
   });
 
@@ -394,7 +394,7 @@ describe("evaluateSpawnDecision", () => {
     const state: SandboxState = {
       status: "stale",
       createdAt: now - 120000,
-      providerObjectId: "daytona-abc123",
+      providerObjectId: "provider-abc123",
       snapshotImageId: null,
       hasActiveWebSocket: false,
     };
@@ -409,7 +409,7 @@ describe("evaluateSpawnDecision", () => {
     const state: SandboxState = {
       status: "stopped",
       createdAt: now - 120000,
-      providerObjectId: "daytona-abc123",
+      providerObjectId: "provider-abc123",
       snapshotImageId: "img-abc123",
       hasActiveWebSocket: false,
     };
@@ -454,7 +454,7 @@ describe("evaluateSpawnDecision", () => {
     const state: SandboxState = {
       status: "stopped",
       createdAt: now - 120000,
-      providerObjectId: "daytona-abc123",
+      providerObjectId: "provider-abc123",
       snapshotImageId: null,
       hasActiveWebSocket: false,
     };
@@ -469,7 +469,7 @@ describe("evaluateSpawnDecision", () => {
     const state: SandboxState = {
       status: "failed",
       createdAt: now - 120000,
-      providerObjectId: "daytona-abc123",
+      providerObjectId: "provider-abc123",
       snapshotImageId: null,
       hasActiveWebSocket: false,
     };

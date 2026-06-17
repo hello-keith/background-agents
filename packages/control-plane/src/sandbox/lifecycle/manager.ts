@@ -871,9 +871,8 @@ export class SandboxLifecycleManager {
   /**
    * Clear preview URLs after a sandbox is no longer reachable.
    *
-   * Daytona resumes preserve the code-server password, so only the URL is
-   * cleared. Modal-style snapshots rotate the password on restore, so both
-   * values are removed.
+   * Providers with persistent resume preserve the code-server password, so
+   * only the URL is cleared. Modal snapshots rotate the password on restore.
    */
   private clearSandboxAccessState(): void {
     if (this.usesProviderManagedStop() && this.storage.clearSandboxCodeServerUrl) {

@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
 CREATE TABLE IF NOT EXISTS sandbox (
   id TEXT PRIMARY KEY,
   modal_sandbox_id TEXT,                            -- Our generated sandbox ID
-  modal_object_id TEXT,                             -- Legacy provider object ID (Modal object ID or Daytona handle)
+  modal_object_id TEXT,                             -- Modal provider object ID
   snapshot_id TEXT,
   snapshot_image_id TEXT,                           -- Modal Image ID for filesystem snapshot restoration
   auth_token TEXT,                                  -- Token for sandbox to authenticate back to control plane

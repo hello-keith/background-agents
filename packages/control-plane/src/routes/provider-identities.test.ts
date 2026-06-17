@@ -129,7 +129,7 @@ describe("provider identity routes", () => {
     });
 
     it("rejects unsupported providers with 400 without resolving a user", async () => {
-      const response = await callProviderIdentityRoute("/provider-identities/gitlab/U123", {});
+      const response = await callProviderIdentityRoute("/provider-identities/unsupported/U123", {});
 
       expect(response.status).toBe(400);
       await expect(response.json()).resolves.toEqual({

@@ -156,10 +156,6 @@ describe("getAvatarUrl", () => {
   it("returns undefined for undefined", () => {
     expect(getAvatarUrl(undefined)).toBeUndefined();
   });
-
-  it("returns undefined for unsupported provider", () => {
-    expect(getAvatarUrl("user", "bitbucket")).toBeUndefined();
-  });
 });
 
 describe("ParticipantService", () => {

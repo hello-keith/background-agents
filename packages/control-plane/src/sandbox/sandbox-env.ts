@@ -5,11 +5,9 @@ import type { McpServerConfig } from "@open-inspect/shared";
  *
  * The runtime decodes the `SESSION_CONFIG` env var into a single canonical
  * shape (see the Python `SessionConfig` in
- * `packages/sandbox-runtime/src/sandbox_runtime/types.py`). Every provider used
- * to hand-roll that object independently, which let fields silently diverge —
- * the Daytona provider dropped `mcp_servers` entirely because its local copy
- * never added the key. This module is the single source of truth for the shape
- * so providers serialize it instead of reassembling ad-hoc objects.
+ * `packages/sandbox-runtime/src/sandbox_runtime/types.py`). This module is the
+ * single source of truth for the shape so runtime callers do not reassemble
+ * ad-hoc objects.
  *
  * The runtime reads `session_id`, `branch`, `provider`, `model`, and
  * `mcp_servers` from this payload; `repo_owner` / `repo_name` are included to

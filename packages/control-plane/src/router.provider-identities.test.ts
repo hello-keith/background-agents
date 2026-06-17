@@ -23,10 +23,9 @@ describe("provider identity router integration", () => {
     });
   });
 
-  it("serves provider identity upserts even when the SCM provider is not github", async () => {
+  it("serves GitHub provider identity upserts", async () => {
     const env = {
       INTERNAL_CALLBACK_SECRET: "test-secret",
-      SCM_PROVIDER: "gitlab",
       DB: {
         prepare: vi.fn(),
         batch: vi.fn(),
@@ -56,12 +55,9 @@ describe("provider identity router integration", () => {
     });
   });
 
-  it("serves Google provider identity upserts even when the SCM provider is not github", async () => {
-    // Guards the widened isScmAgnosticRoute regex: a typo dropping `google`
-    // would make this 501 (SCM not implemented) instead of reaching the handler.
+  it("serves Google provider identity upserts", async () => {
     const env = {
       INTERNAL_CALLBACK_SECRET: "test-secret",
-      SCM_PROVIDER: "gitlab",
       DB: {
         prepare: vi.fn(),
         batch: vi.fn(),
@@ -94,10 +90,9 @@ describe("provider identity router integration", () => {
     );
   });
 
-  it("rejects non-GitHub provider identity paths when the SCM provider is not github", async () => {
+  it("rejects unsupported provider identity paths", async () => {
     const env = {
       INTERNAL_CALLBACK_SECRET: "test-secret",
-      SCM_PROVIDER: "gitlab",
       DB: {
         prepare: vi.fn(),
         batch: vi.fn(),
@@ -108,7 +103,7 @@ describe("provider identity router integration", () => {
 
     const token = await generateInternalToken(env.INTERNAL_CALLBACK_SECRET);
     const response = await handleRequest(
-      new Request("https://test.local/provider-identities/gitlab/U123", {
+      new Request("https://test.local/provider-identities/unsupported/U123", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -119,9 +114,9 @@ describe("provider identity router integration", () => {
       env as never
     );
 
-    expect(response.status).toBe(501);
+    expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: "SCM provider 'gitlab' is not implemented in this deployment.",
+      error: "provider must be one of: github, slack, linear, google",
     });
     expect(mockUserStore.resolveOrCreateUser).not.toHaveBeenCalled();
   });

@@ -57,7 +57,7 @@ async def test_report_success_posts_authenticated_payload(monkeypatch):
         build_id="build-1",
         callback_url="https://cp.test/repo-images/build-complete",
         token="callback-token",
-        provider_session_id="vercel-session-1",
+        provider_session_id="modal-session-1",
         logger=MagicMock(),
     )
 
@@ -73,7 +73,7 @@ async def test_report_success_posts_authenticated_payload(monkeypatch):
         "build_id": "build-1",
         "base_sha": "abc123",
         "build_duration_seconds": 12.346,
-        "provider_session_id": "vercel-session-1",
+        "provider_session_id": "modal-session-1",
     }
 
 
@@ -90,7 +90,7 @@ async def test_report_failure_posts_to_failed_endpoint_and_truncates_error(monke
         build_id="build-1",
         callback_url="https://cp.test/repo-images/build-complete",
         token="callback-token",
-        provider_session_id="vercel-session-1",
+        provider_session_id="modal-session-1",
         logger=MagicMock(),
     )
 
@@ -100,7 +100,7 @@ async def test_report_failure_posts_to_failed_endpoint_and_truncates_error(monke
     assert json.loads(requests[0].content) == {
         "build_id": "build-1",
         "error": "x" * 500,
-        "provider_session_id": "vercel-session-1",
+        "provider_session_id": "modal-session-1",
     }
 
 

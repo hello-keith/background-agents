@@ -56,22 +56,8 @@ def require_auth(authorization: str | None) -> None:
 
 
 def _resolve_clone_token() -> str | None:
-    """Resolve a VCS clone token based on SCM_PROVIDER.
-
-    - "gitlab": reads GITLAB_ACCESS_TOKEN from the environment.
-    - "github" (default): generates a short-lived GitHub App installation token.
-
-    Returns None if credentials are missing or token generation fails.
-    """
+    """Resolve a short-lived GitHub App installation token for clone operations."""
     from .auth import generate_installation_token
-
-    scm_provider = os.environ.get("SCM_PROVIDER", "github")
-
-    if scm_provider == "gitlab":
-        token = os.environ.get("GITLAB_ACCESS_TOKEN")
-        if not token:
-            log.warn("gitlab.token_missing")
-        return token
 
     try:
         app_id = os.environ.get("GITHUB_APP_ID")

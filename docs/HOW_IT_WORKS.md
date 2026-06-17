@@ -30,7 +30,7 @@ This enables workflows that aren't possible with interactive tools:
 - **Fire and forget**: Notice a bug before bed, kick off a session, review the PR in the morning
 - **Parallel sessions**: Run multiple approaches simultaneously without tying up your machine
 - **Multiplayer**: Share a session URL with a colleague and collaborate in real-time
-- **Unlimited concurrency**: Your laptop isn't the bottleneck—spin up as many sessions as you need
+- **Unlimited concurrency**: Your laptop isn't the bottleneck; spin up as many sessions as you need
 
 ---
 
@@ -39,7 +39,7 @@ This enables workflows that aren't possible with interactive tools:
 A **session** is the core unit of work in Open-Inspect. Each session is:
 
 - **Tied to a repository**: The agent works in a clone of your repo
-- **Persistent**: State survives across connections—close the browser, come back later
+- **Persistent**: State survives across connections. Close the browser, come back later
 - **Multiplayer**: Multiple users can join, send prompts, and see events in real-time
 - **Stateful**: Contains messages, events, artifacts, and sandbox state
 
@@ -116,7 +116,7 @@ Open-Inspect uses a three-tier architecture spanning multiple cloud providers:
 
 ### Control Plane (Cloudflare Workers)
 
-The control plane is the coordinator. It doesn't execute code—it manages state and routes messages.
+The control plane is the coordinator. It doesn't execute code. It manages state and routes messages.
 
 **Responsibilities:**
 
@@ -144,19 +144,14 @@ development environment.
 - agent-browser CLI + headless Chrome (for browser automation)
 - OpenCode (the coding agent)
 
-Open-Inspect supports two backend patterns:
+Surface uses one sandbox backend:
 
-- **Modal**: near-instant startup plus filesystem snapshot restore
-- **Daytona**: persistent stop/start sandboxes via direct REST API calls
-- **Vercel Sandboxes**: filesystem snapshot restore and repo-image builds via the Vercel Sandbox API
-
-Modal and Vercel support repo-image builds and live filesystem snapshot restore. Daytona uses
-persistent sandboxes instead: the control plane stops the sandbox on inactivity or stale heartbeat,
-then resumes that same sandbox later with the same logical sandbox ID and auth token.
+- **Modal**: near-instant startup plus filesystem snapshot restore, repo-image builds, and tunnel
+  URLs for preview servers.
 
 ### Clients
 
-Clients are how users interact with sessions. The architecture is client-agnostic—any client that
+Clients are how users interact with sessions. The architecture is client agnostic; any client that
 can make HTTP requests and maintain WebSocket connections can participate.
 
 **Current clients:**
@@ -209,7 +204,7 @@ When restoring from a previous snapshot:
 └─────────────┘    └────────────┘    └─────────────┘    └───────┘
 ```
 
-1. **Restore snapshot**: Modal or Vercel restores the filesystem from a saved snapshot
+1. **Restore snapshot**: Modal restores the filesystem from a saved snapshot
 2. **Quick sync**: Pulls latest changes (usually just a few commits)
 3. **Start script**: Runs `.openinspect/start.sh` for runtime startup (if present)
 4. **Ready**: Sandbox is ready almost instantly
@@ -254,9 +249,9 @@ TUNNEL_3000=https://abc123-3000.modal.host
 TUNNEL_5173=https://abc123-5173.modal.host
 ```
 
-This dotenv shape works directly with tools that accept an env-file path — `node --env-file=...`,
-`bun --env-file=...`, `docker compose --env-file=...`. The format is plain `KEY=value`, so any other
-dotenv consumer can read it without parsing.
+This dotenv shape works directly with tools that accept an env-file path, like
+`node --env-file=...`, `bun --env-file=...`, `docker compose --env-file=...`. The format is plain
+`KEY=value`, so any other dotenv consumer can read it without parsing.
 
 **Boot ordering.** On every non-build boot, the supervisor:
 
@@ -298,8 +293,8 @@ Here's what happens when you send a prompt:
 3. **Sandbox receives the prompt**: Via WebSocket, the control plane sends the prompt to the sandbox
    along with author information (for commit attribution).
 
-4. **OpenCode processes it**: The agent reads files, makes edits, runs commands—whatever the task
-   requires. Each action generates events.
+4. **OpenCode processes it**: The agent reads files, makes edits, and runs commands, whatever the
+   task requires. Each action generates events.
 
 5. **Events stream back**: Tool calls, token streams, and status updates flow back through the
    WebSocket to the control plane.
@@ -364,7 +359,7 @@ If you signed in another way (e.g. Google) you have no GitHub OAuth token, so th
 pushes the branch with the shared GitHub App credentials and returns a manual `pull/new` URL — the
 PR is attributed to the App bot rather than to you.
 
-This maintains proper code review workflows—you can't approve your own PRs.
+This maintains proper code review workflows. You can't approve your own PRs.
 
 ---
 
@@ -413,7 +408,7 @@ That's potentially minutes before the agent can start working.
 
 ### How Snapshots Solve This
 
-Modal and Vercel filesystem snapshots let us capture a sandbox's state after setup:
+Modal filesystem snapshots let us capture a sandbox's state after setup:
 
 ```
 First session:  Clone ─▶ Install/Build ─▶ Start Runtime ─▶ [Snapshot] ─▶ Work
@@ -425,10 +420,8 @@ Later sessions: [Restore Snapshot] ─▶ Quick sync ─▶ Start Runtime ─▶
 
 The first session for a repo pays the setup cost. Subsequent sessions restore in seconds.
 
-For Vercel, Terraform builds a base-runtime snapshot from the local checkout and wires a
-deterministic snapshot name into `VERCEL_BASE_SNAPSHOT_NAME`. Fresh Vercel sandboxes resolve that
-name to the newest created snapshot instead of cloning and installing the sandbox runtime on every
-session. See [Vercel Sandbox Provider](VERCEL_SANDBOX_PROVIDER.md) for the full provider flow.
+Terraform deploys the Modal infrastructure package that creates, snapshots, restores, and manages
+session sandboxes.
 
 ### Image Prebuilding
 
@@ -471,10 +464,10 @@ was built for internal use where all employees have access to company repositori
 Fresh sandboxes fetch git credentials on demand through the control plane instead of relying on a
 token embedded in the environment or remote URL. Older snapshots and repo images may still receive
 env-token fallbacks so they can boot through the credential-helper migration. The helper authorizes
-HTTPS requests for the configured SCM host, preserving existing setup/start hooks that clone other
-private repositories available to the installation. This primarily protects continuously running
-sessions and Daytona persistent resumes from expired embedded credentials; Modal snapshot restores
-already mint a fresh fallback token on restore.
+HTTPS requests for the configured GitHub host, preserving existing setup/start hooks that clone
+other private repositories available to the installation. This primarily protects continuously
+running sessions from expired embedded credentials; Modal snapshot restores already mint a fresh
+fallback token on restore.
 
 ### Secrets
 
@@ -486,11 +479,8 @@ You can configure environment variables (API keys, credentials) at global or per
 - Injected into sandboxes at startup
 - Never exposed to clients (only key names are visible)
 
-> **Daytona and Vercel users**: LLM API keys (e.g., `ANTHROPIC_API_KEY` for Claude models) must be
-> added as global secrets. Modal injects these automatically via its own secrets mechanism.
->
-> **DeepSeek (all providers)**: DeepSeek models require `DEEPSEEK_API_KEY` as a global secret with
-> any sandbox provider — unlike `ANTHROPIC_API_KEY`, Modal does not inject it automatically.
+> **DeepSeek**: DeepSeek models require `DEEPSEEK_API_KEY` as a global secret. Modal injects
+> Anthropic credentials through its own secrets mechanism.
 
 See [Secrets Management](./SECRETS.md) for setup instructions.
 

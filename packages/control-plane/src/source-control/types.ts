@@ -27,7 +27,7 @@ export interface RepositoryInfo {
 /**
  * Supported source control provider names.
  */
-export type SourceControlProviderName = "github" | "bitbucket" | "gitlab";
+export type SourceControlProviderName = "github";
 
 /**
  * Authentication context for source control API operations.
@@ -188,7 +188,7 @@ export interface CreatePullRequestResult {
  * Source control provider interface.
  *
  * Defines the contract for source control platform operations.
- * Implementations wrap provider-specific APIs (GitHub, GitLab, Bitbucket).
+ * Implementations wrap GitHub APIs.
  *
  * Error handling:
  * - Methods should throw SourceControlProviderError with appropriate errorType

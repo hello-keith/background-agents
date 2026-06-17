@@ -4,11 +4,6 @@
 
 import type { Env } from "./types";
 import { verifyInternalToken } from "./auth/internal";
-import {
-  resolveScmProviderFromEnv,
-  SourceControlProviderError,
-  type SourceControlProviderName,
-} from "./source-control";
 import { SessionInternalPaths } from "./session/contracts";
 import { createSessionRuntimeClient } from "./session/runtime-client";
 
@@ -70,46 +65,6 @@ const SANDBOX_AUTH_ROUTES: RegExp[] = [
   /^\/sessions\/[^/]+\/slack-notify$/, // Agent-initiated Slack notification
 ];
 
-type CachedScmProvider =
-  | {
-      envValue: string | undefined;
-      provider: SourceControlProviderName;
-      error?: never;
-    }
-  | {
-      envValue: string | undefined;
-      provider?: never;
-      error: SourceControlProviderError;
-    };
-
-let cachedScmProvider: CachedScmProvider | null = null;
-
-function resolveDeploymentScmProvider(env: Env): SourceControlProviderName {
-  const envValue = env.SCM_PROVIDER;
-  if (!cachedScmProvider || cachedScmProvider.envValue !== envValue) {
-    try {
-      cachedScmProvider = {
-        envValue,
-        provider: resolveScmProviderFromEnv(envValue),
-      };
-    } catch (errorValue) {
-      cachedScmProvider = {
-        envValue,
-        error:
-          errorValue instanceof SourceControlProviderError
-            ? errorValue
-            : new SourceControlProviderError("Invalid SCM provider configuration", "permanent"),
-      };
-    }
-  }
-
-  if (cachedScmProvider.error) {
-    throw cachedScmProvider.error;
-  }
-
-  return cachedScmProvider.provider;
-}
-
 /**
  * Check if a path matches any public route pattern.
  */
@@ -122,66 +77,6 @@ function isPublicRoute(path: string): boolean {
  */
 function isSandboxAuthRoute(path: string): boolean {
   return SANDBOX_AUTH_ROUTES.some((pattern) => pattern.test(path));
-}
-
-function isScmAgnosticRoute(path: string): boolean {
-  return (
-    /^\/analytics\/(summary|timeseries|breakdown)$/.test(path) ||
-    // Identity upserts are independent of the SCM provider. Only the known auth
-    // providers are agnostic; an unimplemented SCM (e.g. gitlab) still 501s.
-    /^\/provider-identities\/(github|slack|linear|google)\/[^/]+$/.test(path) ||
-    /^\/sessions\/[^/]+\/tunnel-urls$/.test(path)
-  );
-}
-
-function isProviderImplementedRoute(provider: SourceControlProviderName, path: string): boolean {
-  if (provider === "github") return true;
-  return provider === "gitlab" && /^\/sessions\/[^/]+\/scm-credentials$/.test(path);
-}
-
-function enforceImplementedScmProvider(
-  path: string,
-  env: Env,
-  ctx: RequestContext
-): Response | null {
-  try {
-    const provider = resolveDeploymentScmProvider(env);
-    if (
-      !isProviderImplementedRoute(provider, path) &&
-      !isPublicRoute(path) &&
-      !isScmAgnosticRoute(path)
-    ) {
-      logger.warn("SCM provider not implemented", {
-        event: "scm.provider_not_implemented",
-        scm_provider: provider,
-        http_path: path,
-        request_id: ctx.request_id,
-        trace_id: ctx.trace_id,
-      });
-      const response = error(
-        `SCM provider '${provider}' is not implemented in this deployment.`,
-        501
-      );
-      return withCorsAndTraceHeaders(response, ctx);
-    }
-
-    return null;
-  } catch (errorValue) {
-    const errorMessage =
-      errorValue instanceof SourceControlProviderError
-        ? errorValue.message
-        : "Invalid SCM provider configuration";
-
-    logger.error("Invalid SCM provider configuration", {
-      event: "scm.provider_invalid",
-      error: errorValue instanceof Error ? errorValue : String(errorValue),
-      request_id: ctx.request_id,
-      trace_id: ctx.trace_id,
-    });
-
-    const response = error(errorMessage, 500);
-    return withCorsAndTraceHeaders(response, ctx);
-  }
 }
 
 /**
@@ -394,11 +289,6 @@ export async function handleRequest(
         return withCorsAndTraceHeaders(hmacAuthError, ctx);
       }
     }
-  }
-
-  const providerCheck = enforceImplementedScmProvider(path, env, ctx);
-  if (providerCheck) {
-    return providerCheck;
   }
 
   // Find matching route

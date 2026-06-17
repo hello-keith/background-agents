@@ -31,9 +31,9 @@ class TestBuildRepoUrl:
         sup = _make_supervisor({"VCS_HOST": "github.com"})
         assert sup._build_repo_url() == "https://github.com/acme/app.git"
 
-    def test_bitbucket(self) -> None:
-        sup = _make_supervisor({"VCS_HOST": "bitbucket.org"})
-        assert sup._build_repo_url() == "https://bitbucket.org/acme/app.git"
+    def test_ignores_stale_non_github_host(self) -> None:
+        sup = _make_supervisor({"VCS_HOST": "legacy.example"})
+        assert sup._build_repo_url() == "https://github.com/acme/app.git"
 
     def test_defaults_to_github(self) -> None:
         sup = _make_supervisor()

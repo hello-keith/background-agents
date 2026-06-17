@@ -11,10 +11,9 @@ on:
       - "packages/github-bot/**"
       - "packages/linear-bot/**"
       - "packages/modal-infra/**"
-      - "packages/daytona-infra/**"
       - "packages/sandbox-runtime/**"
       - "packages/shared/**"
-      - "packages/web/**" # Web app deployed via Terraform when web_platform = "cloudflare"
+      - "packages/web/**"
       - ".github/workflows/terraform.yml"
   pull_request:
     branches: [main]
@@ -26,7 +25,6 @@ on:
       - "packages/github-bot/**"
       - "packages/linear-bot/**"
       - "packages/modal-infra/**"
-      - "packages/daytona-infra/**"
       - "packages/sandbox-runtime/**"
       - "packages/shared/**"
       - "packages/web/**"
@@ -183,8 +181,6 @@ jobs:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TF_VAR_cloudflare_worker_subdomain: ${{ secrets.CLOUDFLARE_WORKER_SUBDOMAIN }}
-          TF_VAR_vercel_api_token: "${{ secrets.VERCEL_API_TOKEN || '000000000000000000000000' }}"
-          TF_VAR_vercel_team_id: "${{ secrets.VERCEL_TEAM_ID || 'unused' }}"
           TF_VAR_modal_token_id: ${{ secrets.MODAL_TOKEN_ID }}
           TF_VAR_modal_token_secret: ${{ secrets.MODAL_TOKEN_SECRET }}
           TF_VAR_modal_workspace: ${{ secrets.MODAL_WORKSPACE }}
@@ -220,20 +216,7 @@ jobs:
           TF_VAR_linear_client_id: ${{ secrets.LINEAR_CLIENT_ID }}
           TF_VAR_linear_client_secret: ${{ secrets.LINEAR_CLIENT_SECRET }}
           TF_VAR_linear_webhook_secret: ${{ secrets.LINEAR_WEBHOOK_SECRET }}
-          TF_VAR_web_platform: "${{ secrets.WEB_PLATFORM || 'vercel' }}"
           TF_VAR_enable_durable_object_bindings: "${{ secrets.ENABLE_DURABLE_OBJECT_BINDINGS || 'true' }}"
-          TF_VAR_sandbox_provider: "${{ secrets.SANDBOX_PROVIDER || 'modal' }}"
-          TF_VAR_daytona_api_url: ${{ secrets.DAYTONA_API_URL }}
-          TF_VAR_daytona_api_key: ${{ secrets.DAYTONA_API_KEY }}
-          TF_VAR_daytona_base_snapshot: ${{ secrets.DAYTONA_BASE_SNAPSHOT }}
-          TF_VAR_daytona_target: ${{ secrets.DAYTONA_TARGET }}
-          TF_VAR_vercel_sandbox_token: ${{ secrets.VERCEL_SANDBOX_TOKEN }}
-          TF_VAR_vercel_sandbox_project_id: ${{ secrets.VERCEL_SANDBOX_PROJECT_ID }}
-          TF_VAR_vercel_sandbox_team_id: ${{ secrets.VERCEL_SANDBOX_TEAM_ID }}
-          TF_VAR_vercel_sandbox_api_base_url: ${{ secrets.VERCEL_SANDBOX_API_BASE_URL }}
-          TF_VAR_vercel_base_snapshot_id: ${{ secrets.VERCEL_BASE_SNAPSHOT_ID }}
-          TF_VAR_vercel_sandbox_runtime: "${{ secrets.VERCEL_SANDBOX_RUNTIME || 'node24' }}"
-          TF_VAR_vercel_snapshot_expiration_ms: "${{ secrets.VERCEL_SNAPSHOT_EXPIRATION_MS || '0' }}"
 
       - name: Post Plan Results
         uses: actions/github-script@v8
@@ -326,8 +309,6 @@ jobs:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TF_VAR_cloudflare_worker_subdomain: ${{ secrets.CLOUDFLARE_WORKER_SUBDOMAIN }}
-          TF_VAR_vercel_api_token: "${{ secrets.VERCEL_API_TOKEN || '000000000000000000000000' }}"
-          TF_VAR_vercel_team_id: "${{ secrets.VERCEL_TEAM_ID || 'unused' }}"
           TF_VAR_modal_token_id: ${{ secrets.MODAL_TOKEN_ID }}
           TF_VAR_modal_token_secret: ${{ secrets.MODAL_TOKEN_SECRET }}
           TF_VAR_modal_workspace: ${{ secrets.MODAL_WORKSPACE }}
@@ -363,20 +344,7 @@ jobs:
           TF_VAR_linear_client_id: ${{ secrets.LINEAR_CLIENT_ID }}
           TF_VAR_linear_client_secret: ${{ secrets.LINEAR_CLIENT_SECRET }}
           TF_VAR_linear_webhook_secret: ${{ secrets.LINEAR_WEBHOOK_SECRET }}
-          TF_VAR_web_platform: "${{ secrets.WEB_PLATFORM || 'vercel' }}"
           TF_VAR_enable_durable_object_bindings: "${{ secrets.ENABLE_DURABLE_OBJECT_BINDINGS || 'true' }}"
-          TF_VAR_sandbox_provider: "${{ secrets.SANDBOX_PROVIDER || 'modal' }}"
-          TF_VAR_daytona_api_url: ${{ secrets.DAYTONA_API_URL }}
-          TF_VAR_daytona_api_key: ${{ secrets.DAYTONA_API_KEY }}
-          TF_VAR_daytona_base_snapshot: ${{ secrets.DAYTONA_BASE_SNAPSHOT }}
-          TF_VAR_daytona_target: ${{ secrets.DAYTONA_TARGET }}
-          TF_VAR_vercel_sandbox_token: ${{ secrets.VERCEL_SANDBOX_TOKEN }}
-          TF_VAR_vercel_sandbox_project_id: ${{ secrets.VERCEL_SANDBOX_PROJECT_ID }}
-          TF_VAR_vercel_sandbox_team_id: ${{ secrets.VERCEL_SANDBOX_TEAM_ID }}
-          TF_VAR_vercel_sandbox_api_base_url: ${{ secrets.VERCEL_SANDBOX_API_BASE_URL }}
-          TF_VAR_vercel_base_snapshot_id: ${{ secrets.VERCEL_BASE_SNAPSHOT_ID }}
-          TF_VAR_vercel_sandbox_runtime: "${{ secrets.VERCEL_SANDBOX_RUNTIME || 'node24' }}"
-          TF_VAR_vercel_snapshot_expiration_ms: "${{ secrets.VERCEL_SNAPSHOT_EXPIRATION_MS || '0' }}"
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
 

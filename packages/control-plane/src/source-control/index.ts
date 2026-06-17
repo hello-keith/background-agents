@@ -2,7 +2,7 @@
  * Source control provider module.
  *
  * Provides a pluggable abstraction for source control platforms
- * (GitHub, GitLab, Bitbucket) enabling unit testing and future provider support.
+ * (GitHub) enabling unit testing.
  */
 
 // Types
@@ -24,7 +24,6 @@ export type {
 // Errors
 export type { SourceControlErrorType } from "./errors";
 export { SourceControlProviderError } from "./errors";
-export { DEFAULT_SCM_PROVIDER, resolveScmProviderFromEnv } from "./config";
 export { createSourceControlProviderFromEnv } from "./provider-from-env";
 
 // Providers

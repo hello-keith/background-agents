@@ -152,7 +152,6 @@ async def test_injects_vcs_env_vars_with_token(monkeypatch):
     """Should inject VCS env vars when clone_token is provided."""
     captured = {}
     monkeypatch.setattr("src.sandbox.manager.modal.Sandbox.create", _fake_sandbox_create(captured))
-    monkeypatch.delenv("SCM_PROVIDER", raising=False)
 
     manager = SandboxManager()
     await manager.create_build_sandbox(
@@ -171,7 +170,6 @@ async def test_no_vcs_token_vars_without_token(monkeypatch):
     """Should not inject VCS_CLONE_TOKEN when clone_token is empty."""
     captured = {}
     monkeypatch.setattr("src.sandbox.manager.modal.Sandbox.create", _fake_sandbox_create(captured))
-    monkeypatch.delenv("SCM_PROVIDER", raising=False)
 
     manager = SandboxManager()
     await manager.create_build_sandbox(

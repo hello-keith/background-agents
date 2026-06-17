@@ -69,37 +69,12 @@ module "control_plane_worker" {
       { name = "WORKER_URL", value = local.control_plane_url },
       { name = "DEPLOYMENT_NAME", value = var.deployment_name },
       { name = "APP_NAME", value = var.app_name },
-      { name = "SANDBOX_PROVIDER", value = var.sandbox_provider },
-    ],
-    local.use_modal_backend ? [
+      { name = "SANDBOX_PROVIDER", value = "modal" },
       { name = "MODAL_WORKSPACE", value = var.modal_workspace },
       { name = "MODAL_ENVIRONMENT", value = var.modal_environment },
       { name = "MODAL_ENVIRONMENT_WEB_SUFFIX", value = var.modal_environment_web_suffix },
-    ] : [],
-    local.use_daytona_backend ? [
-      { name = "DAYTONA_API_URL", value = var.daytona_api_url },
-      { name = "DAYTONA_BASE_SNAPSHOT", value = var.daytona_base_snapshot },
-    ] : [],
-    local.use_daytona_backend && var.daytona_target != "" ? [
-      { name = "DAYTONA_TARGET", value = var.daytona_target },
-    ] : [],
-    local.use_vercel_backend ? [
-      { name = "VERCEL_PROJECT_ID", value = var.vercel_sandbox_project_id },
-      { name = "VERCEL_RUNTIME", value = var.vercel_sandbox_runtime },
-      { name = "VERCEL_SNAPSHOT_EXPIRATION_MS", value = tostring(var.vercel_snapshot_expiration_ms) },
-    ] : [],
-    local.use_vercel_backend && var.vercel_sandbox_team_id != "" ? [
-      { name = "VERCEL_TEAM_ID", value = var.vercel_sandbox_team_id },
-    ] : [],
-    local.use_vercel_backend && var.vercel_sandbox_api_base_url != "" ? [
-      { name = "VERCEL_SANDBOX_API_BASE_URL", value = var.vercel_sandbox_api_base_url },
-    ] : [],
-    local.use_vercel_backend && var.vercel_base_snapshot_id != "" ? [
-      { name = "VERCEL_BASE_SNAPSHOT_ID", value = var.vercel_base_snapshot_id },
-    ] : [],
-    local.use_vercel_backend && var.vercel_base_snapshot_id == "" ? [
-      { name = "VERCEL_BASE_SNAPSHOT_NAME", value = module.vercel_sandbox_infra[0].snapshot_name },
-    ] : []
+    ],
+    []
   )
 
   secrets = concat(
@@ -113,17 +88,11 @@ module "control_plane_worker" {
       { name = "GITHUB_APP_PRIVATE_KEY", value = var.github_app_private_key },
       { name = "GITHUB_APP_INSTALLATION_ID", value = var.github_app_installation_id },
     ],
-    local.use_modal_backend ? [
+    [
       { name = "MODAL_TOKEN_ID", value = var.modal_token_id },
       { name = "MODAL_TOKEN_SECRET", value = var.modal_token_secret },
       { name = "MODAL_API_SECRET", value = var.modal_api_secret },
-    ] : [],
-    local.use_daytona_backend ? [
-      { name = "DAYTONA_API_KEY", value = var.daytona_api_key },
-    ] : [],
-    local.use_vercel_backend ? [
-      { name = "VERCEL_TOKEN", value = var.vercel_sandbox_token },
-    ] : [],
+    ],
     # Slack bot token enables the agent-initiated `slack-notify` endpoint.
     # Shares the variable with the slack-bot worker; bound here so the same
     # token can authorize chat.postMessage from agent tool calls.
@@ -152,7 +121,5 @@ module "control_plane_worker" {
     module.session_index_kv,
     null_resource.d1_migrations,
     module.linear_bot_worker,
-    module.daytona_infra,
-    module.vercel_sandbox_infra,
   ]
 }

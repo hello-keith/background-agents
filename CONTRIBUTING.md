@@ -51,7 +51,6 @@ npm test
 | `packages/web`             | Next.js web application              |
 | `packages/sandbox-runtime` | Shared in-sandbox agent runtime      |
 | `packages/modal-infra`     | Modal sandbox infrastructure         |
-| `packages/daytona-infra`   | Daytona snapshot infrastructure      |
 | `packages/shared`          | Shared types and utilities           |
 
 ## Making Changes
@@ -79,12 +78,13 @@ Use clear, descriptive commit messages:
 4. Update documentation if needed
 5. Provide a clear description of your changes
 
-### Source Control Provider Contributions
+### Source Control Boundary Changes
 
-For SCM/provider changes, follow:
+Surface currently supports GitHub repository access only. For source-control boundary changes,
+update:
 
 - `docs/adr/0001-single-provider-scm-boundaries.md`
-- `docs/provider-contribution-checklist.md`
+- the affected control-plane, Modal, sandbox-runtime, and web tests
 
 ## Reporting Issues
 

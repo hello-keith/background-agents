@@ -562,8 +562,6 @@ def test_control_plane_response_invalid_expiry_is_fatal(cache_dir: Path, env_set
         # Nothing in env → mint (host defaults to github.com when unset).
         ({}, True),
         ({"VCS_HOST": "github.com"}, True),
-        # Non-github deployment → never touch gh's own auth.
-        ({"VCS_HOST": "gitlab.com"}, False),
         # A user-set GH_TOKEN always wins (the manager never injects GH_TOKEN).
         ({"VCS_HOST": "github.com", "GH_TOKEN": "user"}, False),
         # A user token without the fallback marker → leave it in place.
@@ -641,20 +639,6 @@ def test_gh_token_action_prints_nothing_for_user_token(
 ) -> None:
     """A user-provided token means gh uses its own env — no mint, no output."""
     monkeypatch.setenv("GITHUB_TOKEN", "user_token")
-    transport = _mock_response({"should": "not be called"}, status=500)
-    calls = [0]
-    with _patch_httpx(transport, calls):
-        code, out, _err = _run("", action="gh-token")
-
-    assert code == 0
-    assert out == ""
-    assert calls[0] == 0
-
-
-def test_gh_token_action_prints_nothing_for_non_github_host(
-    cache_dir: Path, env_set: None, clean_gh_env: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("VCS_HOST", "gitlab.com")
     transport = _mock_response({"should": "not be called"}, status=500)
     calls = [0]
     with _patch_httpx(transport, calls):

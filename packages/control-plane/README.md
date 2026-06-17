@@ -223,10 +223,9 @@ for normal git operations. Git invokes the sandbox credential helper, which call
 `/sessions/:id/scm-credentials` with the sandbox auth token and receives short-lived credentials on
 demand. Legacy snapshots, repo images, and one-shot image builds may still receive env-token
 fallbacks for compatibility. The helper preserves the existing installation-wide model by serving
-credentials for HTTPS git requests to the configured SCM host, including setup/start hooks that
-clone auxiliary private repos. This avoids stale embedded credentials in long-running sessions and
-Daytona persistent resumes; Modal snapshot restores still mint a fresh fallback token during
-restore.
+credentials for HTTPS git requests to GitHub, including setup/start hooks that clone auxiliary
+private repos. This avoids stale embedded credentials in long-running sessions and Modal snapshot
+restores.
 
 If a `create-pr` request is triggered by a participant without a user OAuth token (for example,
 Slack-created or Google-login sessions), the sandbox can still push the branch with brokered GitHub
@@ -249,17 +248,6 @@ All secrets are configured via Terraform. Required secrets include:
 - `GITHUB_APP_PRIVATE_KEY` - GitHub App private key (PKCS#8 format)
 - `GITHUB_APP_INSTALLATION_ID` - Single installation for all users
 - `REPO_SECRETS_ENCRYPTION_KEY` - AES-GCM key for encrypting repo secrets in D1
-
-Optional variables:
-
-- `SCM_PROVIDER` - Source control provider for this deployment (`github`, `bitbucket`, or `gitlab`,
-  default: `github`). `bitbucket` returns explicit `501 Not Implemented` responses until
-  implemented.
-- `GITLAB_ACCESS_TOKEN` - Personal Access Token for GitLab API access (required when
-  `SCM_PROVIDER=gitlab`). Must have `read_api` scope for reads and `api` scope to create merge
-  requests and push branches.
-- `GITLAB_NAMESPACE` - GitLab group namespace to scope repository listing (optional). When set,
-  `GET /repos` lists projects within the group instead of all projects the token has access to.
 
 See
 [terraform/environments/production/terraform.tfvars.example](../../terraform/environments/production/terraform.tfvars.example)

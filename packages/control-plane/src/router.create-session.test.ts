@@ -75,7 +75,6 @@ describe("handleCreateSession D1 ordering", () => {
 
     return {
       INTERNAL_CALLBACK_SECRET: secret,
-      SCM_PROVIDER: "github",
       DB: {
         prepare: vi.fn(() => statement),
         batch: vi.fn(),

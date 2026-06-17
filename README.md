@@ -9,10 +9,10 @@ Open-Inspect provides a hosted background coding agent that can:
 
 - Work on tasks in the background while you focus on other things
 - Access full development environments (Node.js, Python, git, browser automation, VS Code)
-- Connect from anywhere — web UI, Slack, GitHub PRs, Linear issues, or webhooks
+- Connect from anywhere - web UI, Slack, GitHub PRs, Linear issues, or webhooks
 - Enable multiplayer sessions where multiple people can collaborate in real time
 - Create PRs with proper commit attribution to the prompting user
-- Run on a schedule — cron jobs, Sentry alerts, and webhook-triggered automations
+- Run on a schedule - cron jobs, Sentry alerts, and webhook-triggered automations
 - Spawn parallel sub-tasks that work in separate sandboxes simultaneously
 - Use your choice of AI model — Anthropic Claude, OpenAI Codex (via ChatGPT subscription), or
   OpenCode Zen
@@ -117,7 +117,6 @@ built for internal use where all employees are trusted and have access to compan
 | [web](packages/web)                         | Next.js web client                          |
 | [sandbox-runtime](packages/sandbox-runtime) | Shared in-sandbox agent runtime             |
 | [modal-infra](packages/modal-infra)         | Modal sandbox infrastructure                |
-| [daytona-infra](packages/daytona-infra)     | Daytona snapshot infrastructure             |
 | [slack-bot](packages/slack-bot)             | Slack integration (sessions from messages)  |
 | [github-bot](packages/github-bot)           | GitHub integration (auto-review, @mention)  |
 | [linear-bot](packages/linear-bot)           | Linear integration (issue → coding session) |
@@ -141,11 +140,11 @@ To set up recurring scheduled tasks, see **[docs/AUTOMATIONS.md](docs/AUTOMATION
 
 Sessions start near-instantly through multiple layers of warming:
 
-- **Filesystem snapshots** — After each prompt, sandbox state is saved; follow-up sessions restore
+- **Filesystem snapshots** - After each prompt, sandbox state is saved; follow-up sessions restore
   instead of re-cloning
-- **Pre-built repo images** — Toggle per-repo in Settings; rebuilt every 30 minutes with latest
+- **Pre-built repo images** - Toggle per-repo in Settings; rebuilt every 30 minutes with latest
   commits and dependencies
-- **Proactive warming** — Sandbox begins spinning up as soon as you start typing, before you hit
+- **Proactive warming** - Sandbox begins spinning up as soon as you start typing, before you hit
   Enter
 
 ### Multiplayer Sessions
@@ -178,7 +177,7 @@ Choose the AI model that fits your task, with per-session reasoning effort contr
 | OpenAI       | GPT 5.2, GPT 5.4, GPT 5.5, GPT 5.2 Codex, 5.3 Codex, 5.3 Codex Spark |
 | OpenCode Zen | Kimi K2.5/K2.6, MiniMax M2.5, Qwen3.7 Max, GLM 5/5.1 (opt-in)        |
 
-OpenAI models work with your existing ChatGPT subscription via OAuth — no separate API key needed.
+OpenAI models work with your existing ChatGPT subscription via OAuth - no separate API key needed.
 See **[docs/AVAILABLE_MODELS.md](docs/AVAILABLE_MODELS.md)** for the full model list and
 **[docs/OPENAI_MODELS.md](docs/OPENAI_MODELS.md)** for OpenAI setup instructions.
 
@@ -186,23 +185,23 @@ See **[docs/AVAILABLE_MODELS.md](docs/AVAILABLE_MODELS.md)** for the full model 
 
 Interact with agents from wherever your team already works:
 
-- **Web UI** — Full session management with real-time streaming, model/reasoning selectors, terminal
+- **Web UI** - Full session management with real-time streaming, model/reasoning selectors, terminal
   panel, and multiplayer presence
-- **Slack Bot** — @mention or DM to start a session; replies thread back with results. Per-user
+- **Slack Bot** - @mention or DM to start a session; replies thread back with results. Per-user
   model and branch preferences via App Home. See [Slack integration](docs/integrations/SLACK.md)
-- **GitHub Bot** — Auto-review on PR open or respond to @mentions in PR comments. Configurable
+- **GitHub Bot** - Auto-review on PR open or respond to @mentions in PR comments. Configurable
   per-repo. See [GitHub integration](docs/integrations/GITHUB.md)
-- **Linear Bot** — Mention or assign the agent on an issue to start a coding session, post progress
+- **Linear Bot** - Mention or assign the agent on an issue to start a coding session, post progress
   activities, and link the resulting PR. See [Linear integration](docs/integrations/LINEAR.md)
-- **Webhooks** — Trigger sessions from any external system via authenticated HTTP POST
+- **Webhooks** - Trigger sessions from any external system via authenticated HTTP POST
 
 ### Automations
 
-Schedule recurring tasks or react to external events — no human in the loop:
+Schedule recurring tasks or react to external events - no human in the loop:
 
-- **Cron schedules** — Hourly, daily, weekly, monthly, or custom 5-field cron with timezone support
-- **Sentry alerts** — Auto-triage on new errors, regressions, or critical metric alerts
-- **Inbound webhooks** — JSONPath condition filters to gate which payloads spawn sessions
+- **Cron schedules** - Hourly, daily, weekly, monthly, or custom 5-field cron with timezone support
+- **Sentry alerts** - Auto-triage on new errors, regressions, or critical metric alerts
+- **Inbound webhooks** - JSONPath condition filters to gate which payloads spawn sessions
 - Auto-pause after 3 consecutive failures, manual trigger button, full run history
 
 See **[docs/AUTOMATIONS.md](docs/AUTOMATIONS.md)** for setup instructions.
@@ -257,8 +256,8 @@ docker compose up -d postgres redis
   - `SETUP_TIMEOUT_SECONDS` (default `300`)
   - `START_TIMEOUT_SECONDS` (default `120`)
 - Both hooks receive `OPENINSPECT_BOOT_MODE` (`build`, `fresh`, `repo_image`, `snapshot_restore`)
-- Git operations in hooks can authenticate to other private repos on the configured SCM host when
-  the shared installation has access
+- Git operations in hooks can authenticate to other private GitHub repos when the shared
+  installation has access
 
 ## License
 
@@ -270,8 +269,6 @@ Inspired by [Ramp's Inspect](https://builders.ramp.com/post/why-we-built-our-bac
 built with:
 
 - [Modal](https://modal.com) - Cloud sandbox infrastructure
-- [Daytona](https://www.daytona.io) - Cloud development sandboxes
-- [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox) - Cloud sandbox infrastructure
 - [Cloudflare Workers](https://workers.cloudflare.com) - Edge computing
 - [OpenCode](https://opencode.ai) - Coding agent runtime
 - [Next.js](https://nextjs.org) - Web framework

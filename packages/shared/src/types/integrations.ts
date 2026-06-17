@@ -49,13 +49,10 @@ export const DEFAULT_MAX_CONCURRENT_CHILD_SESSIONS = 5;
 export const DEFAULT_MAX_TOTAL_CHILD_SESSIONS = 15;
 
 /**
- * Sandbox environment settings. Provider-agnostic: describes what the user
- * wants, not how it's done. Resource fields (`cpuCores`, `memoryMib`) are
- * advisory and provider-dependent — Modal maps them directly, Vercel maps
- * them to vCPUs, and providers without resource reservations ignore them. We
- * only check they're positive; the provider enforces its own real limits. When
- * unset, the provider's own default applies. At repo scope, `null` explicitly
- * uses the provider default instead of inheriting a global resource default.
+ * Sandbox environment settings. Describes what the user wants, while Modal
+ * enforces the real limits. Resource fields (`cpuCores`, `memoryMib`) are
+ * advisory. We only check they're positive. At repo scope, `null` explicitly
+ * uses the Modal default instead of inheriting a global resource default.
  */
 export interface SandboxSettings {
   /** Extra ports to expose via tunnels (e.g., dev server ports 3000, 5173). */

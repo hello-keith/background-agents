@@ -24,19 +24,6 @@ variable "cloudflare_worker_subdomain" {
   type        = string
 }
 
-variable "vercel_api_token" {
-  description = "Vercel API token (required only when web_platform = 'vercel'). Do NOT set to empty string — the Vercel provider validates this on init even when no Vercel resources are created. Leave unset to use the built-in dummy token for Cloudflare-only deployments."
-  type        = string
-  sensitive   = true
-  default     = "000000000000000000000000"
-}
-
-variable "vercel_team_id" {
-  description = "Vercel team ID (required only when web_platform = 'vercel'). Leave unset when using Cloudflare."
-  type        = string
-  default     = "unused"
-}
-
 variable "modal_token_id" {
   description = "Modal API token ID"
   type        = string
@@ -44,8 +31,8 @@ variable "modal_token_id" {
   default     = ""
 
   validation {
-    condition     = var.sandbox_provider != "modal" || length(var.modal_token_id) > 0
-    error_message = "modal_token_id must be set when sandbox_provider = 'modal'."
+    condition     = length(var.modal_token_id) > 0
+    error_message = "modal_token_id must be set."
   }
 }
 
@@ -56,8 +43,8 @@ variable "modal_token_secret" {
   default     = ""
 
   validation {
-    condition     = var.sandbox_provider != "modal" || length(var.modal_token_secret) > 0
-    error_message = "modal_token_secret must be set when sandbox_provider = 'modal'."
+    condition     = length(var.modal_token_secret) > 0
+    error_message = "modal_token_secret must be set."
   }
 }
 
@@ -67,8 +54,8 @@ variable "modal_workspace" {
   default     = ""
 
   validation {
-    condition     = var.sandbox_provider != "modal" || length(var.modal_workspace) > 0
-    error_message = "modal_workspace must be set when sandbox_provider = 'modal'."
+    condition     = length(var.modal_workspace) > 0
+    error_message = "modal_workspace must be set."
   }
 }
 
@@ -78,8 +65,8 @@ variable "modal_environment" {
   default     = "main"
 
   validation {
-    condition     = var.sandbox_provider != "modal" || (length(trimspace(var.modal_environment)) > 0 && can(regex("^[^:/\\\\]+$", var.modal_environment)))
-    error_message = "modal_environment must be set and must not contain colons, slashes, or backslashes when sandbox_provider = 'modal'."
+    condition     = length(trimspace(var.modal_environment)) > 0 && can(regex("^[^:/\\\\]+$", var.modal_environment))
+    error_message = "modal_environment must be set and must not contain colons, slashes, or backslashes."
   }
 }
 
@@ -89,8 +76,8 @@ variable "modal_environment_web_suffix" {
   default     = ""
 
   validation {
-    condition     = var.sandbox_provider != "modal" || can(regex("^$|^[a-z0-9-]+$", var.modal_environment_web_suffix))
-    error_message = "modal_environment_web_suffix must be empty or contain only lowercase letters, digits, and dashes when sandbox_provider = 'modal'."
+    condition     = can(regex("^$|^[a-z0-9-]+$", var.modal_environment_web_suffix))
+    error_message = "modal_environment_web_suffix must be empty or contain only lowercase letters, digits, and dashes."
   }
 }
 
@@ -298,102 +285,9 @@ variable "modal_api_secret" {
   default     = ""
 
   validation {
-    condition     = var.sandbox_provider != "modal" || length(var.modal_api_secret) > 0
-    error_message = "modal_api_secret must be set when sandbox_provider = 'modal'."
+    condition     = length(var.modal_api_secret) > 0
+    error_message = "modal_api_secret must be set."
   }
-}
-
-variable "daytona_api_url" {
-  description = "Base URL for the Daytona REST API (e.g. https://app.daytona.io/api)"
-  type        = string
-  default     = ""
-
-  validation {
-    condition     = var.sandbox_provider != "daytona" || length(var.daytona_api_url) > 0
-    error_message = "daytona_api_url must be set when sandbox_provider = 'daytona'."
-  }
-}
-
-variable "daytona_api_key" {
-  description = "API key for Daytona REST API (Bearer auth)"
-  type        = string
-  sensitive   = true
-  default     = ""
-
-  validation {
-    condition     = var.sandbox_provider != "daytona" || length(var.daytona_api_key) > 0
-    error_message = "daytona_api_key must be set when sandbox_provider = 'daytona'."
-  }
-}
-
-variable "daytona_base_snapshot" {
-  description = "Named Daytona snapshot used for fresh sandbox creation"
-  type        = string
-  default     = ""
-
-  validation {
-    condition     = var.sandbox_provider != "daytona" || length(var.daytona_base_snapshot) > 0
-    error_message = "daytona_base_snapshot must be set when sandbox_provider = 'daytona'."
-  }
-}
-
-variable "daytona_target" {
-  description = "Optional Daytona target name"
-  type        = string
-  default     = ""
-}
-
-variable "vercel_sandbox_token" {
-  description = "Vercel API token for the Vercel Sandbox API"
-  type        = string
-  sensitive   = true
-  default     = ""
-
-  validation {
-    condition     = var.sandbox_provider != "vercel" || length(var.vercel_sandbox_token) > 0
-    error_message = "vercel_sandbox_token must be set when sandbox_provider = 'vercel'."
-  }
-}
-
-variable "vercel_sandbox_project_id" {
-  description = "Vercel project ID used to scope Sandbox API calls"
-  type        = string
-  default     = ""
-
-  validation {
-    condition     = var.sandbox_provider != "vercel" || length(var.vercel_sandbox_project_id) > 0
-    error_message = "vercel_sandbox_project_id must be set when sandbox_provider = 'vercel'."
-  }
-}
-
-variable "vercel_sandbox_team_id" {
-  description = "Optional Vercel team ID used to scope Sandbox API calls"
-  type        = string
-  default     = ""
-}
-
-variable "vercel_sandbox_api_base_url" {
-  description = "Optional Vercel Sandbox API base URL override"
-  type        = string
-  default     = ""
-}
-
-variable "vercel_base_snapshot_id" {
-  description = "Optional manual Vercel Sandbox snapshot ID containing the Open-Inspect base runtime. When set, Terraform skips managed Vercel base snapshot builds."
-  type        = string
-  default     = ""
-}
-
-variable "vercel_sandbox_runtime" {
-  description = "Vercel Sandbox runtime identifier"
-  type        = string
-  default     = "node24"
-}
-
-variable "vercel_snapshot_expiration_ms" {
-  description = "Vercel Sandbox snapshot expiration in milliseconds; 0 means no expiration"
-  type        = number
-  default     = 0
 }
 
 variable "nextauth_secret" {
@@ -406,30 +300,8 @@ variable "nextauth_secret" {
 # Configuration
 # =============================================================================
 
-variable "sandbox_provider" {
-  description = "Sandbox backend for session execution: 'modal', 'daytona', or 'vercel'"
-  type        = string
-  default     = "modal"
-
-  validation {
-    condition     = contains(["modal", "daytona", "vercel"], var.sandbox_provider)
-    error_message = "sandbox_provider must be 'modal', 'daytona', or 'vercel'."
-  }
-}
-
-variable "web_platform" {
-  description = "Platform for the web app deployment: 'vercel' or 'cloudflare' (OpenNext)"
-  type        = string
-  default     = "vercel"
-
-  validation {
-    condition     = contains(["vercel", "cloudflare"], var.web_platform)
-    error_message = "web_platform must be 'vercel' or 'cloudflare'."
-  }
-}
-
 variable "deployment_name" {
-  description = "Unique deployment name used in URLs and resource names. Use something unique like your GitHub username or company name (e.g., 'acme', 'johndoe'). This will create URLs like: open-inspect-{deployment_name}.vercel.app"
+  description = "Unique deployment name used in URLs and resource names. Use something unique like your GitHub username or company name."
   type        = string
 }
 
