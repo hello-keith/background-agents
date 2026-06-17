@@ -14,8 +14,8 @@ Open-Inspect provides a hosted background coding agent that can:
 - Create PRs with proper commit attribution to the prompting user
 - Run on a schedule - cron jobs, Sentry alerts, and webhook-triggered automations
 - Spawn parallel sub-tasks that work in separate sandboxes simultaneously
-- Use your choice of AI model — Anthropic Claude, OpenAI Codex (via ChatGPT subscription), or
-  OpenCode Zen
+- Use your choice of AI model, including Anthropic Claude, OpenAI Codex (via ChatGPT subscription),
+  OpenCode Zen, or DeepSeek
 
 ## Security Model (Single-Tenant Only)
 
@@ -176,6 +176,7 @@ Choose the AI model that fits your task, with per-session reasoning effort contr
 | Anthropic    | Claude Haiku 4.5, Sonnet 4.5/4.6, Opus 4.5/4.6/4.7/4.8, Fable 5      |
 | OpenAI       | GPT 5.2, GPT 5.4, GPT 5.5, GPT 5.2 Codex, 5.3 Codex, 5.3 Codex Spark |
 | OpenCode Zen | Kimi K2.5/K2.6, MiniMax M2.5, Qwen3.7 Max, GLM 5/5.1 (opt-in)        |
+| DeepSeek     | DeepSeek V4 Flash, DeepSeek V4 Pro (opt-in)                          |
 
 OpenAI models work with your existing ChatGPT subscription via OAuth - no separate API key needed.
 See **[docs/AVAILABLE_MODELS.md](docs/AVAILABLE_MODELS.md)** for the full model list and

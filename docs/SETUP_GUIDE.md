@@ -102,6 +102,8 @@ ALLOWED_USERS=
 ALLOWED_EMAIL_DOMAINS=
 # Exact emails (any provider's verified email) — for users on shared domains
 ALLOWED_EMAILS=
+# Empty allowlists deny access unless this is explicitly set to true.
+UNSAFE_ALLOW_ALL_USERS=false
 
 # Optional whitelabel branding (defaults shown). NEXT_PUBLIC_* vars are
 # inlined into the client bundle at build time — restart `npm run dev`
@@ -226,7 +228,8 @@ Your GitHub callback URL does not exactly match the running app URL.
 
 ### Access denied after sign-in
 
-Check `ALLOWED_USERS` and `ALLOWED_EMAIL_DOMAINS` in `packages/web/.env.local`.
+Check `ALLOWED_USERS`, `ALLOWED_EMAIL_DOMAINS`, and `ALLOWED_EMAILS` in `packages/web/.env.local`.
+If all allowlists are empty, set `UNSAFE_ALLOW_ALL_USERS=true` only for trusted local development.
 
 ### Web can load, but session APIs return 401
 

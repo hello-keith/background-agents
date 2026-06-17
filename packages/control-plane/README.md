@@ -175,26 +175,30 @@ payload is malformed. Responses use `Cache-Control: no-store`.
 
 ### Server → Client Messages
 
-| Type               | Description                   |
-| ------------------ | ----------------------------- |
-| `pong`             | Health check response         |
-| `subscribed`       | Confirm subscription          |
-| `prompt_queued`    | Confirm prompt queued         |
-| `sandbox_event`    | Event from sandbox            |
-| `presence_sync`    | Full presence state           |
-| `presence_update`  | Presence change               |
-| `presence_leave`   | Participant disconnected      |
-| `sandbox_spawning` | Sandbox is being created      |
-| `sandbox_warming`  | Sandbox warming               |
-| `sandbox_status`   | Sandbox status update         |
-| `sandbox_ready`    | Sandbox ready                 |
-| `sandbox_error`    | Sandbox error occurred        |
-| `sandbox_warning`  | Sandbox warning message       |
-| `sandbox_restored` | Restored from snapshot        |
-| `artifact_created` | New artifact (PR, screenshot) |
-| `snapshot_saved`   | Filesystem snapshot saved     |
-| `session_status`   | Session status change         |
-| `error`            | Error occurred                |
+| Type                    | Description                    |
+| ----------------------- | ------------------------------ |
+| `pong`                  | Health check response          |
+| `subscribed`            | Confirm subscription           |
+| `prompt_queued`         | Confirm prompt queued          |
+| `sandbox_event`         | Event from sandbox             |
+| `presence_sync`         | Full presence state            |
+| `presence_update`       | Presence change                |
+| `presence_leave`        | Participant disconnected       |
+| `sandbox_spawning`      | Sandbox is being created       |
+| `sandbox_warming`       | Sandbox warming                |
+| `sandbox_status`        | Sandbox status update          |
+| `sandbox_dashboard_url` | Provider sandbox dashboard URL |
+| `sandbox_ready`         | Sandbox ready                  |
+| `sandbox_error`         | Sandbox error occurred         |
+| `sandbox_warning`       | Sandbox warning message        |
+| `sandbox_restored`      | Restored from snapshot         |
+| `artifact_created`      | New artifact (PR, screenshot)  |
+| `snapshot_saved`        | Filesystem snapshot saved      |
+| `session_status`        | Session status change          |
+| `error`                 | Error occurred                 |
+
+`sandbox_dashboard_url` carries `{ url }` and is emitted after a sandbox provider object is created
+or restored.
 
 ## Development
 
