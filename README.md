@@ -218,6 +218,8 @@ Every session runs in an isolated sandbox backend with a full development enviro
 - **Port tunneling:** Expose up to 10 dev server ports via encrypted tunnels. URLs are available
   in-sandbox at `/workspace/.tunnels.env` before `.openinspect/start.sh` runs
   ([details](docs/HOW_IT_WORKS.md#tunnel-urls-inside-the-sandbox))
+- **Sandbox settings:** Configure child-session limits and optional Modal resource reservations
+  globally or per repository
 - **Repo secrets:** AES-256-GCM encrypted, scoped per-repo or globally, injected as env vars at
   spawn time. Supports bulk `.env` paste import
 
@@ -228,6 +230,11 @@ Agents can decompose work into parallel child sessions:
 - `spawn-task` creates a child session in its own sandbox and returns immediately
 - Parent continues working while children run in parallel on separate branches
 - `get-task-status` and `cancel-task` for coordination
+- `maxConcurrentChildSessions` defaults to 5 active children per parent
+- `maxTotalChildSessions` defaults to 15 total children per parent
+- Repo sandbox settings override global defaults. For Modal resources, set `cpuCores` to a positive
+  number and `memoryMib` to a positive integer in MiB. Blank fields inherit; clearing inherited repo
+  resource fields stores `null` so the provider default is used instead of the global value
 - Depth limits and per-repo guardrails enforced
 
 ### Repository Lifecycle Scripts

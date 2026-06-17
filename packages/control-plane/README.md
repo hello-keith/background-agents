@@ -71,6 +71,33 @@ The control plane provides:
 | `/sessions/:id/archive`         | POST      | Archive session                |
 | `/sessions/:id/unarchive`       | POST      | Unarchive session              |
 
+### Provider Identities
+
+| Endpoint                                          | Method | Description                              |
+| ------------------------------------------------- | ------ | ---------------------------------------- |
+| `/provider-identities/:provider/:providerUserId` | PUT    | Resolve or upsert a canonical user ID    |
+
+Supported providers are `github`, `slack`, `linear`, and `google`. This endpoint requires the same
+internal control-plane authentication used by web and bot workers.
+
+Request body fields are optional strings:
+
+- `providerLogin`
+- `providerEmail`
+- `displayName`
+- `avatarUrl`
+
+Response:
+
+```json
+{
+  "userId": "0123456789abcdef0123456789abcdef"
+}
+```
+
+The route trims blank optional fields, links identities by provider ID, and may link providers by
+email through `UserStore.resolveOrCreateUser`.
+
 ### Create PR Payload
 
 `POST /sessions/:id/pr` accepts:

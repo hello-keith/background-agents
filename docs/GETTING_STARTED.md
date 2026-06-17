@@ -13,6 +13,7 @@ Workers for the web and control plane, Modal for sandboxes, and GitHub for repos
 - Cloudflare account with Workers, Durable Objects, D1, KV, and R2 access
 - Modal workspace
 - GitHub App installed on the repositories Surface may access
+- Google OAuth client if enabling Google login
 
 ## Local Setup
 
@@ -41,6 +42,23 @@ Required values:
 
 Install the app only on repositories Surface should be able to clone, branch, push, and open pull
 requests against.
+
+## Optional Google Login
+
+Create a Google OAuth Web client and add this production redirect URI:
+
+```text
+https://<web_app_url>/api/auth/callback/google
+```
+
+Set both Terraform values to enable Google login:
+
+- `google_client_id`
+- `google_client_secret`
+
+Terraform derives `NEXT_PUBLIC_GOOGLE_ENABLED` for the web build. Google sign-in uses the user's
+verified Google email for access control, so configure `allowed_email_domains` or `allowed_emails`.
+`allowed_users` matches GitHub usernames and does not admit Google-only users.
 
 ## Modal
 
@@ -97,6 +115,9 @@ Configure at least one of:
 - `allowed_users`
 - `allowed_email_domains`
 - `allowed_emails`
+
+Email allowlists apply to verified emails from any auth provider. GitHub username allowlists apply
+only to GitHub sign-in.
 
 Use `unsafe_allow_all_users = true` only for an intentionally open deployment.
 

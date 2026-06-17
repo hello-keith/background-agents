@@ -6,8 +6,8 @@ that workflow is enabled.
 
 This guide is for people using the Slack integration day to day. If you are installing the Slack app
 or deploying the worker, start with
-[Getting Started](../GETTING_STARTED.md#step-4-create-slack-app-optional) and
-[Complete Slack Setup](../GETTING_STARTED.md#step-7b-complete-slack-setup-if-using-slack). Optional
+[Getting Started](../GETTING_STARTED.md) and
+[full self-hosted deployment](../SETUP_GUIDE.md#path-c-full-self-hosted-deployment). Optional
 notification controls and safety notes are covered near the end.
 
 ---
@@ -219,7 +219,7 @@ Check that the bot has been invited to the channel and that your message mention
 does not act on ordinary channel messages.
 
 If setup was just changed, confirm the Slack app event subscriptions and interactivity URLs in
-[Complete Slack Setup](../GETTING_STARTED.md#step-7b-complete-slack-setup-if-using-slack).
+[full self-hosted deployment](../SETUP_GUIDE.md#path-c-full-self-hosted-deployment).
 
 ### DMs do not start sessions
 
