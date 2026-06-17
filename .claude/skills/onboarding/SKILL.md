@@ -122,7 +122,8 @@ Guide user through creating a GitHub App (handles both OAuth and repo access):
    `https://open-inspect-web-{deployment_name}.{workers_subdomain}.workers.dev/api/auth/callback/github`
    - **CRITICAL**: Must match the deployed Cloudflare web URL exactly!
 6. **Repository permissions**: Contents (Read & Write), Issues (Read & Write), Pull requests (Read &
-   Write), Metadata (Read-only)
+   Write), Metadata (Read-only). Add Checks (Read-only) when using `check_suite.completed`
+   automations.
 7. Create app, note **App ID**
 8. Generate **Client Secret**, note **Client ID** and **Client Secret**
 9. Generate **Private Key** (downloads .pem file)
@@ -168,11 +169,12 @@ Guide user:
 
 1. https://api.slack.com/apps → "Create New App" → "From scratch"
 2. OAuth & Permissions → Add scopes: `app_mentions:read`, `chat:write`, `channels:history`,
-   `channels:read`, `groups:history`, `groups:read`, `im:history`, `im:read`, `reactions:write`
+   `channels:read`, `groups:history`, `groups:read`, `im:history`, `im:read`, `reactions:write`,
+   `users:read`
 3. Install to Workspace, note **Bot Token** (`xoxb-...`)
 4. Basic Information → note **Signing Secret**
-5. **App Home and Event Subscriptions configured AFTER deployment** (worker must be running for URL
-   verification)
+5. **App Home, Event Subscriptions, and Interactivity configured AFTER deployment** (worker must be
+   running for URL verification)
 
 ## Phase 6: Generate Security Secrets
 
@@ -244,7 +246,8 @@ After Terraform deployment, guide user:
 1. App Home → Show Tabs → Enable **"Home Tab"**
 2. Save Changes
 
-The App Home provides a settings interface where users can configure their preferred Claude model.
+The App Home provides a settings interface where users can configure their preferred model,
+reasoning effort, and branch.
 
 ### Configure Event Subscriptions
 
@@ -273,8 +276,8 @@ After Terraform deployment, guide user:
 3. **Webhook URL**:
    `https://open-inspect-github-bot-{deployment_name}.{subdomain}.workers.dev/webhooks/github`
 4. **Webhook secret**: Enter the `github_webhook_secret` value
-5. Under **Subscribe to events**, check: **Pull requests**, **Issue comments**, **Pull request
-   review comments**
+5. Under **Subscribe to events**, check: **Pull requests**, **Issues**, **Issue comments**, **Pull
+   request review comments**. Add **Check suite** when using `check_suite.completed` automations.
 6. Save changes
 
 ### Find Bot Username
@@ -301,9 +304,12 @@ Terraform deploys the web app to Cloudflare Workers via OpenNext during apply.
 
 ```bash
 curl https://open-inspect-control-plane-{deployment_name}.{subdomain}.workers.dev/health
-curl https://{workspace}--open-inspect-api-health.modal.run
+curl https://{modal_workspace_slug}--open-inspect-api-health.modal.run
 curl -I https://open-inspect-web-{deployment_name}.{subdomain}.workers.dev
 ```
+
+Use `{workspace}` as `{modal_workspace_slug}` when `modal_environment_web_suffix` is empty. If the
+suffix is set, use `{workspace}-{modal_environment_web_suffix}`.
 
 Present deployment summary table. Instruct user to test: visit web app, sign in with GitHub, create
 session, send prompt.

@@ -75,6 +75,11 @@ The build process runs the same setup steps that a normal session would:
 Everything your setup script installs - dependencies, build artifacts, caches - is captured in the
 snapshot.
 
+When secret storage is configured, build sandboxes receive the merged global and repository secrets
+as environment variables. Repository secrets override global secrets with the same name. Treat these
+as build-time secrets only: do not echo them or write them into files, caches, or artifacts, because
+the filesystem snapshot is reused by later sessions.
+
 ### What Happens When You Start a Session
 
 When you create a new session for a repository with a pre-built image:

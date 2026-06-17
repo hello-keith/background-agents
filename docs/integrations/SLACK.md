@@ -221,8 +221,8 @@ These notes are most useful for workspace admins deciding where the Slack bot sh
 - Slack bot tokens stay server-side. They are not sent to sandboxes.
 - Slack requests are verified before Open-Inspect acts on them.
 - Slack-created sessions use deployment-level repository access. The repositories shown in Slack are
-  the repositories accessible to the configured GitHub App or SCM installation, not a per-Slack-user
-  GitHub permission list.
+  the repositories accessible to the configured GitHub App installation, not a per-Slack-user GitHub
+  permission list.
 - Slack identity linking is best-effort and is not used to approve repository access. To restrict
   what Slack sessions can touch, limit the GitHub App installation to selected repositories and
   invite the Slack bot only into trusted channels.

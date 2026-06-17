@@ -181,10 +181,12 @@ The route reads repo-scoped OpenAI OAuth secrets first, then global secrets. Com
 `OPENAI_OAUTH_REFRESH_TOKEN` is missing, `500` when secret storage is not configured, and `502` when
 the upstream OpenAI refresh fails.
 
-### SCM Credentials
+### GitHub Credentials
 
 `POST /sessions/:id/scm-credentials` is a sandbox-authenticated endpoint used by the in-sandbox git
-credential helper. It returns fresh SCM credentials for git operations in this shape:
+credential helper. The route name keeps the historical `scm` path, but the broker is GitHub-only:
+it mints a short-lived GitHub App installation token and returns it for git operations in this
+shape:
 
 ```json
 {
@@ -195,9 +197,7 @@ credential helper. It returns fresh SCM credentials for git operations in this s
 ```
 
 Common failures are `401` for a missing or invalid sandbox token, `404` when the session no longer
-exists, and `5xx` when provider configuration or upstream token minting fails. Source-control
-providers must implement `generateCredentialHelperAuth` before helper-backed sandbox git auth works
-for that provider.
+exists, and `5xx` when GitHub App configuration is missing or GitHub token minting fails.
 
 ### Tunnel URLs
 

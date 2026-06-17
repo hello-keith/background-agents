@@ -21,7 +21,7 @@ For the full model list, including Claude Fable 5 and other Anthropic models, se
 | GPT 5.3 Codex       | Latest codex variant           |
 | GPT 5.3 Codex Spark | Lightweight Codex variant      |
 
-OpenAI models support reasoning effort levels: none, low, medium, high, and extra high (default:
+OpenAI models support reasoning effort levels: none, low, medium, high, and xhigh (default:
 high for Codex models).
 
 ---
