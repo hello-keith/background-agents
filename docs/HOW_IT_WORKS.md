@@ -479,8 +479,9 @@ You can configure environment variables (API keys, credentials) at global or per
 - Injected into sandboxes at startup
 - Never exposed to clients (only key names are visible)
 
-> **DeepSeek**: DeepSeek models require `DEEPSEEK_API_KEY` as a global secret. Modal injects
-> Anthropic credentials through its own secrets mechanism.
+> **DeepSeek**: DeepSeek models require `DEEPSEEK_API_KEY` as a global or repository secret. Repo
+> secrets override global values. Modal injects Anthropic credentials through its own secrets
+> mechanism.
 
 See [Secrets Management](./SECRETS.md) for setup instructions.
 

@@ -258,14 +258,15 @@ payload is malformed. Responses use `Cache-Control: no-store`.
 
 ### Client → Server Messages
 
-| Type        | Description        | Payload                     |
-| ----------- | ------------------ | --------------------------- |
-| `ping`      | Health check       | `{}`                        |
-| `subscribe` | Join session       | `{ token, clientId }`       |
-| `prompt`    | Send prompt        | `{ content, attachments? }` |
-| `stop`      | Stop execution     | `{}`                        |
-| `typing`    | User typing (warm) | `{}`                        |
-| `presence`  | Update presence    | `{ status, cursor? }`       |
+| Type            | Description        | Payload                     |
+| --------------- | ------------------ | --------------------------- |
+| `ping`          | Health check       | `{}`                        |
+| `subscribe`     | Join session       | `{ token, clientId }`       |
+| `prompt`        | Send prompt        | `{ content, attachments? }` |
+| `stop`          | Stop execution     | `{}`                        |
+| `typing`        | User typing (warm) | `{}`                        |
+| `presence`      | Update presence    | `{ status, cursor? }`       |
+| `fetch_history` | Load older events  | `{ cursor, limit? }`        |
 
 ### Server → Client Messages
 
@@ -275,6 +276,7 @@ payload is malformed. Responses use `Cache-Control: no-store`.
 | `subscribed`            | Confirm subscription           |
 | `prompt_queued`         | Confirm prompt queued          |
 | `sandbox_event`         | Event from sandbox             |
+| `history_page`          | Older sandbox event page       |
 | `presence_sync`         | Full presence state            |
 | `presence_update`       | Presence change                |
 | `presence_leave`        | Participant disconnected       |
@@ -286,20 +288,37 @@ payload is malformed. Responses use `Cache-Control: no-store`.
 | `sandbox_error`         | Sandbox error occurred         |
 | `sandbox_warning`       | Sandbox warning message        |
 | `sandbox_restored`      | Restored from snapshot         |
+| `code_server_info`      | Code-server tunnel credentials |
+| `ttyd_info`             | Terminal tunnel credentials    |
+| `tunnel_urls`           | Runtime tunnel URLs            |
 | `artifact_created`      | New artifact event             |
 | `snapshot_saved`        | Filesystem snapshot saved      |
 | `session_status`        | Session status change          |
+| `session_branch`        | Session branch update          |
 | `session_title`         | Session title update           |
+| `child_session_update`  | Child session status update    |
+| `processing_status`     | Prompt processing state        |
 | `error`                 | Error occurred                 |
+
+`history_page` carries `{ items, hasMore, cursor }` for older sandbox events requested by
+`fetch_history`.
 
 `sandbox_dashboard_url` carries `{ url }` and is emitted after a sandbox provider object is created
 or restored.
 
+`code_server_info`, `ttyd_info`, and `tunnel_urls` carry sandbox access URLs and credentials for
+the current sandbox instance.
+
 `artifact_created` carries `{ artifact }`. Artifact types include PRs, screenshots, videos,
 previews, and branches.
 
+`session_branch` carries `{ branchName }`. `processing_status` carries `{ isProcessing }`.
+
 `session_title` carries `{ title }`. Sandbox-generated titles only fill an empty session title; a
 manual title update uses the same broadcast after validation.
+
+`child_session_update` carries `{ childSessionId, status, title }` when a child session is spawned
+or changes status.
 
 ## Development
 

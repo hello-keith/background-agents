@@ -91,7 +91,12 @@ project_root    = "../../../"
 # app_short_name = "Surface"
 # app_icon_url = ""
 
-# Optional R2 bucket override. Leave empty to use open-inspect-media-<deployment_name>.
+# Optional R2 media bucket override. Leave empty to let Terraform manage
+# open-inspect-media-<deployment_name>. Set only for a pre-created private bucket,
+# and import that bucket into state before apply so Terraform does not recreate it:
+# terraform import cloudflare_r2_bucket.media <account_id>/<bucket_name>
+# Do not rename a bucket with stored media unless you are intentionally migrating
+# or importing replacement state.
 # r2_media_bucket_name = ""
 # r2_media_location = "ENAM"
 

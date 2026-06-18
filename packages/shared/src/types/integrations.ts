@@ -154,7 +154,7 @@ export const INTEGRATION_DEFINITIONS: {
   {
     id: "sandbox",
     name: "Sandbox",
-    description: "Sandbox environment settings (tunnel ports, timeouts, etc.)",
+    description: "Sandbox settings for tunnels, terminal access, child sessions, CPU, and memory",
   },
   {
     id: "slack",
