@@ -19,6 +19,7 @@ import shutil
 import signal
 import time
 from pathlib import Path
+from typing import Any, cast
 
 import httpx
 
@@ -87,7 +88,7 @@ class SandboxSupervisor:
     SIDECAR_TIMEOUT_SECONDS = 5
     MCP_PACKAGE_INSTALL_TIMEOUT_SECONDS = 180
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.opencode_process: asyncio.subprocess.Process | None = None
         self.bridge_process: asyncio.subprocess.Process | None = None
         self.code_server_process: asyncio.subprocess.Process | None = None
@@ -112,7 +113,7 @@ class SandboxSupervisor:
 
         # Parse session config if provided
         session_config_json = os.environ.get("SESSION_CONFIG", "{}")
-        self.session_config = json.loads(session_config_json)
+        self.session_config: dict[str, Any] = json.loads(session_config_json)
 
         # Paths
         self.workspace_path = Path("/workspace")
@@ -595,9 +596,9 @@ class SandboxSupervisor:
         except Exception as e:
             self.log.warn("code_server.log_forward_error", exc=e)
 
-    def _resolve_mcp_servers(self) -> list[dict]:
+    def _resolve_mcp_servers(self) -> list[dict[str, Any]]:
         """Resolve MCP servers from session config."""
-        return self.session_config.get("mcp_servers") or []
+        return cast("list[dict[str, Any]]", self.session_config.get("mcp_servers") or [])
 
     # Validates npm package names before passing to `npm install -g`.
     # Accepts: "package", "@scope/package", "package@1.0.0", "@scope/package@1.0.0"
@@ -606,7 +607,7 @@ class SandboxSupervisor:
     # removing the check — the package name comes from user-supplied config.
     _NPM_PKG_RE = re.compile(r"^(@[\w.-]+/)?[\w][\w.-]*(@[\w.-]+)?$")
 
-    async def _install_mcp_packages(self, servers: list[dict]) -> None:
+    async def _install_mcp_packages(self, servers: list[dict[str, Any]]) -> None:
         """Pre-install npm packages for local MCP servers that use npx."""
         packages: list[str] = []
         for server in servers:
@@ -674,15 +675,15 @@ class SandboxSupervisor:
         except Exception as e:
             self.log.warn("mcp.packages_install_error", packages=packages, exc=str(e))
 
-    def _build_mcp_config(self, servers: list[dict]) -> dict[str, dict]:
+    def _build_mcp_config(self, servers: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         """Convert MCP server list to OpenCode mcp config format."""
-        config: dict[str, dict] = {}
+        config: dict[str, dict[str, Any]] = {}
         for server in servers:
             name = server.get("name", "")
             if not name:
                 continue
             if server.get("type") == "remote":
-                entry: dict = {"type": "remote", "url": server.get("url", "")}
+                entry: dict[str, Any] = {"type": "remote", "url": server.get("url", "")}
                 auth_headers = server.get("headers") or server.get("env") or {}
                 if auth_headers:
                     entry["headers"] = auth_headers
@@ -797,7 +798,7 @@ class SandboxSupervisor:
         # Build OpenCode config from session settings
         provider = self.session_config.get("provider", "anthropic")
         model = self.session_config.get("model", "claude-sonnet-4-6")
-        opencode_config: dict = {
+        opencode_config: dict[str, Any] = {
             "model": f"{provider}/{model}",
             "permission": {"*": {"*": "allow"}},
         }
@@ -1395,8 +1396,12 @@ class SandboxSupervisor:
 
         # Set up signal handlers
         loop = asyncio.get_event_loop()
+
+        def handle_signal(sig: signal.Signals) -> None:
+            asyncio.create_task(self._handle_signal(sig))
+
         for sig in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self._handle_signal(s)))
+            loop.add_signal_handler(sig, handle_signal, sig)
 
         git_sync_success = False
         head_sha = ""
@@ -1573,7 +1578,7 @@ class SandboxSupervisor:
         self.log.info("supervisor.shutdown_complete")
 
 
-async def main():
+async def main() -> None:
     """Entry point for the sandbox supervisor."""
     supervisor = SandboxSupervisor()
     await supervisor.run()

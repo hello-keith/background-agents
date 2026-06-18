@@ -124,13 +124,12 @@ NEXT_PUBLIC_WS_URL=ws://localhost:8787
 > **Access Control**: If `ALLOWED_USERS`, `ALLOWED_EMAIL_DOMAINS`, and `ALLOWED_EMAILS` are empty,
 > sign-in is denied unless `UNSAFE_ALLOW_ALL_USERS=true`. `ALLOWED_USERS` matches GitHub usernames;
 > email allowlists match verified emails from any auth provider. For Terraform-managed production
-> deploys, Terraform also fails validation unless you set at least one allowlist or explicitly opt in
-> with `unsafe_allow_all_users = true`.
+> deploys, Terraform also fails validation unless you set at least one allowlist or explicitly opt
+> in with `unsafe_allow_all_users = true`.
 
-> **Branding**: `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_SHORT_NAME`, and
-> `NEXT_PUBLIC_APP_ICON_URL` are read at build time. Restart `npm run dev` after changing them
-> locally. Terraform-managed production deploys set them from `app_name`, `app_short_name`, and
-> `app_icon_url`.
+> **Branding**: `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_SHORT_NAME`, and `NEXT_PUBLIC_APP_ICON_URL`
+> are read at build time. Restart `npm run dev` after changing them locally. Terraform-managed
+> production deploys set them from `app_name`, `app_short_name`, and `app_icon_url`.
 
 ### Development
 

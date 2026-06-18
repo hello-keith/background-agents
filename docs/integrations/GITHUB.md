@@ -5,8 +5,7 @@ can automatically review new PRs and respond when you mention it in PR comments 
 threads.
 
 This guide is for people using the GitHub integration day to day. If you are installing the GitHub
-App or deploying the bot worker, start with
-[GitHub App](../GETTING_STARTED.md#github-app) and
+App or deploying the bot worker, start with [GitHub App](../GETTING_STARTED.md#github-app) and
 [full self-hosted deployment](../SETUP_GUIDE.md#path-c-full-self-hosted-deployment).
 
 ---

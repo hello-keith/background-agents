@@ -196,5 +196,5 @@ scope. If an issue is ambiguous, include the intended `owner/repo` in the issue 
 
 ### The agent is active in too many repositories
 
-Limit the GitHub App installation to intended repositories, or set **Repository Scope** to **Selected
-repositories** in the Linear integration settings.
+Limit the GitHub App installation to intended repositories, or set **Repository Scope** to
+**Selected repositories** in the Linear integration settings.

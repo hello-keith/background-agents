@@ -132,9 +132,9 @@ under 72 characters. Use the PR body for details, not the commit message.
 - **Modal deployment**: never deploy `src/app.py` directly - use `modal deploy deploy.py` or
   `modal deploy -m src`. The `app.py` file doesn't import function modules.
 - **Modal image rebuild**: update `CACHE_BUSTER` in `src/images/base.py` to force a rebuild.
-- **Web platform**: the web app deploys to Cloudflare Workers via OpenNext. `NEXT_PUBLIC_WS_URL`
-  and `NEXT_PUBLIC_GOOGLE_ENABLED` must be available at build time since Next.js inlines
-  `NEXT_PUBLIC_*` vars into the client bundle.
+- **Web platform**: the web app deploys to Cloudflare Workers via OpenNext. `NEXT_PUBLIC_WS_URL` and
+  `NEXT_PUBLIC_GOOGLE_ENABLED` must be available at build time since Next.js inlines `NEXT_PUBLIC_*`
+  vars into the client bundle.
 - **Repository access**: source control is GitHub-only. Google sign-in authenticates users, but git
   clone, fetch, push, and PR operations use the configured GitHub App installation.
 

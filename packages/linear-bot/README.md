@@ -130,8 +130,8 @@ On any Linear issue:
 - Agent status is visible directly in Linear (thinking, working, done)
 - Add a `model:<name>` label to override the model (e.g., `model:opus`, `model:sonnet`,
   `model:haiku`, `model:opus-4-8`, `model:fable`, `model:fable-5`, `model:gpt-5.4`,
-  `model:gpt-5.2-codex`). See [Available Models](../../docs/AVAILABLE_MODELS.md) for canonical
-  model IDs.
+  `model:gpt-5.2-codex`). See [Available Models](../../docs/AVAILABLE_MODELS.md) for canonical model
+  IDs.
 
 ## Repo Resolution
 
@@ -165,13 +165,13 @@ All `/config/*` endpoints require HMAC auth via `Authorization: Bearer <token>`.
 
 The agent uses Linear's native activity system:
 
-| Activity        | When                              | User sees                                       |
-| --------------- | --------------------------------- | ----------------------------------------------- |
+| Activity        | When                                   | User sees                                       |
+| --------------- | -------------------------------------- | ----------------------------------------------- |
 | **Thought**     | Analyzing, session started, follow-ups | Thinking indicator in Linear                    |
 | **Response**    | Final completion output, PR opened     | Comment-like message on the issue               |
-| **Error**       | Something went wrong              | Error message on the issue                      |
-| **Action**      | Tool calls (file edits, commands) | Ephemeral status (e.g., "Editing `src/foo.ts`") |
-| **Elicitation** | Repo classification is uncertain  | Question asking user to clarify                 |
+| **Error**       | Something went wrong                   | Error message on the issue                      |
+| **Action**      | Tool calls (file edits, commands)      | Ephemeral status (e.g., "Editing `src/foo.ts`") |
+| **Elicitation** | Repo classification is uncertain       | Question asking user to clarify                 |
 
 ## Development
 

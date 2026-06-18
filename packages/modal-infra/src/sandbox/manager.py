@@ -38,7 +38,7 @@ SNAPSHOT_FILESYSTEM_TIMEOUT_SECONDS = 300
 MAX_TUNNEL_PORTS = 10
 
 
-def _resource_kwargs(settings: dict[str, Any] | None) -> dict:
+def _resource_kwargs(settings: dict[str, Any] | None) -> dict[str, Any]:
     """Map sandbox settings to Modal resource kwargs.
 
     `cpuCores` -> Modal `cpu` (cores, fractional allowed), `memoryMib` -> Modal
@@ -48,7 +48,7 @@ def _resource_kwargs(settings: dict[str, Any] | None) -> dict:
     if not settings:
         return {}
 
-    kwargs: dict = {}
+    kwargs: dict[str, Any] = {}
 
     cpu_cores = settings.get("cpuCores")
     if cpu_cores is not None:
@@ -172,7 +172,7 @@ class SandboxManager:
         return resolved
 
     @staticmethod
-    def _validate_ports(raw: list) -> list[int]:
+    def _validate_ports(raw: list[Any]) -> list[int]:
         """Validate and sanitize tunnel ports: must be int, 1-65535, max MAX_TUNNEL_PORTS."""
         ports: list[int] = []
         for p in raw:
@@ -270,7 +270,7 @@ class SandboxManager:
 
     @staticmethod
     def _inject_vcs_env_vars(
-        env_vars: dict[str, str],
+        env_vars: dict[str, str | None],
         clone_token: str | None,
         *,
         include_github_cli_aliases: bool = False,
@@ -334,7 +334,7 @@ class SandboxManager:
             sandbox_id = f"sandbox-{config.repo_owner}-{config.repo_name}-{int(time.time() * 1000)}"
 
         # Prepare environment variables (user vars first, system vars override)
-        env_vars: dict[str, str] = {}
+        env_vars: dict[str, str | None] = {}
 
         if config.user_env_vars:
             env_vars.update(config.user_env_vars)
@@ -397,7 +397,7 @@ class SandboxManager:
         if tunnel_ports:
             env_vars[EXPECTED_TUNNEL_PORTS_ENV_VAR] = ",".join(str(p) for p in tunnel_ports)
 
-        create_kwargs: dict = {
+        create_kwargs: dict[str, Any] = {
             "image": image,
             "app": app,
             "secrets": [llm_secrets],
@@ -471,7 +471,7 @@ class SandboxManager:
         sandbox_id = f"build-{repo_owner}-{repo_name}-{int(time.time() * 1000)}"
 
         # Prepare environment variables (user vars first, system vars override)
-        env_vars: dict[str, str] = {}
+        env_vars: dict[str, str | None] = {}
 
         if user_env_vars:
             env_vars.update(user_env_vars)
@@ -632,7 +632,7 @@ class SandboxManager:
     async def restore_from_snapshot(
         self,
         snapshot_image_id: str,
-        session_config: SessionConfig | dict,
+        session_config: SessionConfig | dict[str, Any],
         sandbox_id: str | None = None,
         control_plane_url: str = "",
         sandbox_auth_token: str = "",
@@ -664,8 +664,10 @@ class SandboxManager:
 
         # Handle both SessionConfig and dict
         if isinstance(session_config, dict):
-            repo_owner = session_config.get("repo_owner", "")
-            repo_name = session_config.get("repo_name", "")
+            raw_repo_owner = session_config.get("repo_owner", "")
+            raw_repo_name = session_config.get("repo_name", "")
+            repo_owner = raw_repo_owner if isinstance(raw_repo_owner, str) else ""
+            repo_name = raw_repo_name if isinstance(raw_repo_name, str) else ""
             session_config_json = json.dumps(session_config)
         else:
             repo_owner = session_config.repo_owner
@@ -680,7 +682,7 @@ class SandboxManager:
         image = modal.Image.from_id(snapshot_image_id)
 
         # Prepare environment variables (user vars first, system vars override)
-        env_vars: dict[str, str] = {}
+        env_vars: dict[str, str | None] = {}
 
         if user_env_vars:
             env_vars.update(user_env_vars)
@@ -727,7 +729,7 @@ class SandboxManager:
         if tunnel_ports:
             env_vars[EXPECTED_TUNNEL_PORTS_ENV_VAR] = ",".join(str(p) for p in tunnel_ports)
 
-        create_kwargs: dict = {
+        create_kwargs: dict[str, Any] = {
             "image": image,
             "app": app,
             "secrets": [llm_secrets],

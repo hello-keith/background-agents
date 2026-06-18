@@ -83,8 +83,8 @@ The bot is deployed via Terraform as a standalone Cloudflare Worker alongside th
 
 The existing GitHub App needs these additions:
 
-**Permissions**: `Pull requests: Read & write`, `Issues: Read & write`. Add `Checks: Read-only`
-when using `check_suite.completed` automations.
+**Permissions**: `Pull requests: Read & write`, `Issues: Read & write`. Add `Checks: Read-only` when
+using `check_suite.completed` automations.
 
 **Event subscriptions**: `Pull request`, `Issue comment`, `Pull request review comment`, `Issues`.
 Add `Check suite` when using `check_suite.completed` automations.
@@ -121,11 +121,10 @@ All events are processed asynchronously via `executionCtx.waitUntil()`. The webh
 200 immediately after signature verification and delivery dedupe.
 
 The webhook endpoint also forwards normalized events to the control plane for GitHub Event
-automations. Supported automation event types are `pull_request.opened`,
-`pull_request.synchronize`, `pull_request.closed`, `issue_comment.created`,
-`pull_request_review_comment.created`, `check_suite.completed`, `issues.opened`, and
-`issues.labeled`. Events that do not start a bot session directly can still trigger automations after
-normalization.
+automations. Supported automation event types are `pull_request.opened`, `pull_request.synchronize`,
+`pull_request.closed`, `issue_comment.created`, `pull_request_review_comment.created`,
+`check_suite.completed`, `issues.opened`, and `issues.labeled`. Events that do not start a bot
+session directly can still trigger automations after normalization.
 
 ### Handler Flows
 
@@ -139,9 +138,9 @@ normalization.
 
 **Review Requested (compatibility path):**
 
-Assigning the GitHub App bot through the PR reviewer picker is supported for manual review
-requests. It remains a compatibility path; auto-review and `@mention` comments are the recommended
-day-to-day workflows.
+Assigning the GitHub App bot through the PR reviewer picker is supported for manual review requests.
+It remains a compatibility path; auto-review and `@mention` comments are the recommended day-to-day
+workflows.
 
 1. Check `requested_reviewer.login` matches `GITHUB_BOT_USERNAME` — return early if not
 2. Post eyes reaction on the PR (fire-and-forget)

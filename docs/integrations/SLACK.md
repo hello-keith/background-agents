@@ -5,8 +5,7 @@ the same Slack thread, set personal defaults in App Home, and ask agents to post
 that workflow is enabled.
 
 This guide is for people using the Slack integration day to day. If you are installing the Slack app
-or deploying the worker, start with
-[Getting Started](../GETTING_STARTED.md) and
+or deploying the worker, start with [Getting Started](../GETTING_STARTED.md) and
 [full self-hosted deployment](../SETUP_GUIDE.md#path-c-full-self-hosted-deployment). Optional
 notification controls and safety notes are covered near the end.
 

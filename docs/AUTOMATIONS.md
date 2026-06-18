@@ -29,18 +29,18 @@ Start by choosing a **Trigger Type**. The rest of the form adjusts based on that
 
 | Field            | Description                                                                                                                                                                                |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Trigger Type** | How the automation starts: schedule, inbound webhook, Sentry alert, or GitHub event.                                                                                                      |
+| **Trigger Type** | How the automation starts: schedule, inbound webhook, Sentry alert, or GitHub event.                                                                                                       |
 | **Name**         | A short label for the automation (max 200 characters). Appears in the automations list and in session titles prefixed with `[Auto]`.                                                       |
 | **Repository**   | The GitHub repository to run against. Only repositories installed on the GitHub App are available. Cannot be changed after creation.                                                       |
 | **Instructions** | The prompt sent to the coding agent each time the automation fires (max 10,000 characters). Write this as you would a normal session prompt and reference the trigger context when useful. |
 
 ### Optional Fields
 
-| Field          | Description                                                                                       |
-| -------------- | ------------------------------------------------------------------------------------------------- |
-| **Branch**     | The base branch for each session. Defaults to the repository's default branch (usually `main`).   |
-| **Model**      | The AI model to use. Defaults to the system default model.                                        |
-| **Reasoning**  | Optional reasoning level for models that support it.                                              |
+| Field          | Description                                                                                                       |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Branch**     | The base branch for each session. Defaults to the repository's default branch (usually `main`).                   |
+| **Model**      | The AI model to use. Defaults to the system default model.                                                        |
+| **Reasoning**  | Optional reasoning level for models that support it.                                                              |
 | **Conditions** | Optional trigger filters for event-driven automations such as inbound webhooks, Sentry alerts, and GitHub events. |
 
 ### Trigger-Specific Fields
@@ -56,16 +56,16 @@ For non-schedule automations, schedule fields are not used.
 
 Supported GitHub event types:
 
-| Event Type                                  | Description                              |
-| ------------------------------------------- | ---------------------------------------- |
-| `pull_request.opened`                       | A pull request was opened                |
-| `pull_request.synchronize`                  | New commits were pushed to a PR          |
-| `pull_request.closed`                       | A pull request was closed or merged      |
-| `issue_comment.created`                     | A comment was added to an issue or PR    |
-| `pull_request_review_comment.created`       | A review comment was added to a PR       |
-| `check_suite.completed`                     | A CI check suite finished running        |
-| `issues.opened`                             | An issue was opened                      |
-| `issues.labeled`                            | A label was added to an issue            |
+| Event Type                            | Description                           |
+| ------------------------------------- | ------------------------------------- |
+| `pull_request.opened`                 | A pull request was opened             |
+| `pull_request.synchronize`            | New commits were pushed to a PR       |
+| `pull_request.closed`                 | A pull request was closed or merged   |
+| `issue_comment.created`               | A comment was added to an issue or PR |
+| `pull_request_review_comment.created` | A review comment was added to a PR    |
+| `check_suite.completed`               | A CI check suite finished running     |
+| `issues.opened`                       | An issue was opened                   |
+| `issues.labeled`                      | A label was added to an issue         |
 
 ---
 
@@ -174,14 +174,14 @@ Example filters:
 
 GitHub event automations support these condition types:
 
-| Condition             | Operators             | Meaning                                                  |
-| --------------------- | --------------------- | -------------------------------------------------------- |
-| Head branch           | `glob_match`, `exact` | PR source branch or check-suite head branch              |
-| Target branch         | `glob_match`, `exact` | PR base branch. Non-PR events do not match this filter   |
-| Label                 | `any_of`, `none_of`   | GitHub labels on supported issue or PR events            |
-| Path glob             | `any_match`           | Changed file paths match at least one glob               |
-| Actor                 | `include`, `exclude`  | GitHub username that triggered the event                 |
-| Check conclusion      | `eq`                  | Check-suite conclusion such as `success` or `failure`    |
+| Condition        | Operators             | Meaning                                                |
+| ---------------- | --------------------- | ------------------------------------------------------ |
+| Head branch      | `glob_match`, `exact` | PR source branch or check-suite head branch            |
+| Target branch    | `glob_match`, `exact` | PR base branch. Non-PR events do not match this filter |
+| Label            | `any_of`, `none_of`   | GitHub labels on supported issue or PR events          |
+| Path glob        | `any_match`           | Changed file paths match at least one glob             |
+| Actor            | `include`, `exclude`  | GitHub username that triggered the event               |
+| Check conclusion | `eq`                  | Check-suite conclusion such as `success` or `failure`  |
 
 Use **Head branch** for the branch that contains proposed changes. Use **Target branch** for the PR
 merge base, such as `main` or `release/*`.

@@ -119,10 +119,10 @@ are reached. The response is `{ sessionId, status }` with status `201`.
 through long child runs.
 
 `GET /sessions/:id/events` accepts `cursor`, `limit`, `type`, and `message_id`. Events are returned
-newest-first as `{ events, cursor, hasMore }`; each event includes `id`, `type`, `data`, `messageId`,
-and `createdAt`. `limit` defaults to 50 and is capped at 200. New clients should pass the returned
-composite cursor (`<createdAt>:<url-encoded-event-id>`) to fetch the next page; legacy numeric
-timestamp cursors are still accepted for older clients.
+newest-first as `{ events, cursor, hasMore }`; each event includes `id`, `type`, `data`,
+`messageId`, and `createdAt`. `limit` defaults to 50 and is capped at 200. New clients should pass
+the returned composite cursor (`<createdAt>:<url-encoded-event-id>`) to fetch the next page; legacy
+numeric timestamp cursors are still accepted for older clients.
 
 ### Session Media
 
@@ -144,15 +144,15 @@ must be `false`. Sessions are limited to 100 screenshots and 20 videos. Uploads 
 row and matching `artifact` event on the active prompt; they return `409` when no prompt is active.
 
 `GET /sessions/:id/media/:artifactId` requires internal control-plane authentication and streams
-stored screenshot or video artifacts from object storage. It returns the stored content type, `ETag`,
-`Accept-Ranges: bytes`, and `Content-Length`; valid `Range` requests return `206` with
+stored screenshot or video artifacts from object storage. It returns the stored content type,
+`ETag`, `Accept-Ranges: bytes`, and `Content-Length`; valid `Range` requests return `206` with
 `Content-Range`, and unsatisfiable ranges return `416`.
 
 ### Provider Identities
 
-| Endpoint                                          | Method | Description                              |
-| ------------------------------------------------- | ------ | ---------------------------------------- |
-| `/provider-identities/:provider/:providerUserId` | PUT    | Resolve or upsert a canonical user ID    |
+| Endpoint                                         | Method | Description                           |
+| ------------------------------------------------ | ------ | ------------------------------------- |
+| `/provider-identities/:provider/:providerUserId` | PUT    | Resolve or upsert a canonical user ID |
 
 Supported providers are `github`, `slack`, `linear`, and `google`. This endpoint requires the same
 internal control-plane authentication used by web and bot workers.
@@ -180,20 +180,20 @@ email through `UserStore.resolveOrCreateUser`.
 Supported integration IDs are `github`, `linear`, `code-server`, `sandbox`, and `slack`. All
 integration settings routes require internal control-plane authentication.
 
-| Endpoint                                             | Method | Description                    |
-| ---------------------------------------------------- | ------ | ------------------------------ |
-| `/integration-settings/:id`                          | GET    | Get global settings            |
-| `/integration-settings/:id`                          | PUT    | Update global settings         |
-| `/integration-settings/:id`                          | DELETE | Delete global settings         |
-| `/integration-settings/:id/repos`                    | GET    | List repo overrides            |
-| `/integration-settings/:id/repos/:owner/:name`       | GET    | Get repo override              |
-| `/integration-settings/:id/repos/:owner/:name`       | PUT    | Update repo override           |
-| `/integration-settings/:id/repos/:owner/:name`       | DELETE | Delete repo override           |
-| `/integration-settings/:id/resolved/:owner/:name`    | GET    | Get merged runtime config      |
+| Endpoint                                          | Method | Description               |
+| ------------------------------------------------- | ------ | ------------------------- |
+| `/integration-settings/:id`                       | GET    | Get global settings       |
+| `/integration-settings/:id`                       | PUT    | Update global settings    |
+| `/integration-settings/:id`                       | DELETE | Delete global settings    |
+| `/integration-settings/:id/repos`                 | GET    | List repo overrides       |
+| `/integration-settings/:id/repos/:owner/:name`    | GET    | Get repo override         |
+| `/integration-settings/:id/repos/:owner/:name`    | PUT    | Update repo override      |
+| `/integration-settings/:id/repos/:owner/:name`    | DELETE | Delete repo override      |
+| `/integration-settings/:id/resolved/:owner/:name` | GET    | Get merged runtime config |
 
-Global writes accept `{ "settings": { "defaults": ..., "enabledRepos": ... } }`. Repo writes
-accept `{ "settings": ... }`. `enabledRepos` is `null` when all repos are enabled, an empty array
-when no repos are enabled, or a lowercased allowlist.
+Global writes accept `{ "settings": { "defaults": ..., "enabledRepos": ... } }`. Repo writes accept
+`{ "settings": ... }`. `enabledRepos` is `null` when all repos are enabled, an empty array when no
+repos are enabled, or a lowercased allowlist.
 
 `GET /integration-settings/:id/resolved/:owner/:name` returns `{ integrationId, repo, config }`
 after applying global defaults, repo overrides, and runtime defaults. For `sandbox`, `config`
@@ -242,16 +242,15 @@ refresh OpenAI OAuth access tokens without exposing stored refresh tokens. It re
 ```
 
 The route reads repo-scoped OpenAI OAuth secrets first, then global secrets. Common failures are
-`401` for a missing or invalid sandbox token, `404` when the session or
-`OPENAI_OAUTH_REFRESH_TOKEN` is missing, `500` when secret storage is not configured, and `502` when
-the upstream OpenAI refresh fails.
+`401` for a missing or invalid sandbox token, `404` when the session or `OPENAI_OAUTH_REFRESH_TOKEN`
+is missing, `500` when secret storage is not configured, and `502` when the upstream OpenAI refresh
+fails.
 
 ### GitHub Credentials
 
 `POST /sessions/:id/scm-credentials` is a sandbox-authenticated endpoint used by the in-sandbox git
-credential helper. The route name keeps the historical `scm` path, but the broker is GitHub-only:
-it mints a short-lived GitHub App installation token and returns it for git operations in this
-shape:
+credential helper. The route name keeps the historical `scm` path, but the broker is GitHub-only: it
+mints a short-lived GitHub App installation token and returns it for git operations in this shape:
 
 ```json
 {
@@ -299,16 +298,16 @@ payload is malformed. Responses use `Cache-Control: no-store`.
 
 Repo image routes are available when `SANDBOX_PROVIDER` resolves to Modal.
 
-| Endpoint                           | Method | Auth                         | Description                    |
-| ---------------------------------- | ------ | ---------------------------- | ------------------------------ |
-| `/repo-images/build-complete`      | POST   | Modal callback token         | Mark a build ready             |
-| `/repo-images/build-failed`        | POST   | Modal callback token         | Mark a build failed            |
-| `/repo-images/trigger/:owner/:name` | POST   | Internal control-plane token | Start a repo image build       |
-| `/repo-images/status`              | GET    | Internal control-plane token | List all build statuses        |
-| `/repo-images/toggle/:owner/:name` | PUT    | Internal control-plane token | Enable or disable repo builds  |
-| `/repo-images/enabled-repos`       | GET    | Internal control-plane token | List repos enabled for builds  |
-| `/repo-images/mark-stale`          | POST   | Internal control-plane token | Fail old building rows         |
-| `/repo-images/cleanup`             | POST   | Internal control-plane token | Delete old failed build rows   |
+| Endpoint                            | Method | Auth                         | Description                   |
+| ----------------------------------- | ------ | ---------------------------- | ----------------------------- |
+| `/repo-images/build-complete`       | POST   | Modal callback token         | Mark a build ready            |
+| `/repo-images/build-failed`         | POST   | Modal callback token         | Mark a build failed           |
+| `/repo-images/trigger/:owner/:name` | POST   | Internal control-plane token | Start a repo image build      |
+| `/repo-images/status`               | GET    | Internal control-plane token | List all build statuses       |
+| `/repo-images/toggle/:owner/:name`  | PUT    | Internal control-plane token | Enable or disable repo builds |
+| `/repo-images/enabled-repos`        | GET    | Internal control-plane token | List repos enabled for builds |
+| `/repo-images/mark-stale`           | POST   | Internal control-plane token | Fail old building rows        |
+| `/repo-images/cleanup`              | POST   | Internal control-plane token | Delete old failed build rows  |
 
 The callback routes are exempt from the worker's regular internal-auth gate, but still require
 `Authorization: Bearer <token>` signed with `INTERNAL_CALLBACK_SECRET`. Other repo-image routes use
@@ -388,8 +387,8 @@ are used by the Modal scheduler. `mark-stale` accepts optional `max_age_seconds`
 `sandbox_dashboard_url` carries `{ url }` and is emitted after a sandbox provider object is created
 or restored.
 
-`code_server_info`, `ttyd_info`, and `tunnel_urls` carry sandbox access URLs and credentials for
-the current sandbox instance.
+`code_server_info`, `ttyd_info`, and `tunnel_urls` carry sandbox access URLs and credentials for the
+current sandbox instance.
 
 `artifact_created` carries `{ artifact }`. Artifact types include PRs, screenshots, videos,
 previews, and branches.
