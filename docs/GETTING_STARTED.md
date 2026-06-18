@@ -32,13 +32,37 @@ pytest tests/ -v
 
 Create one GitHub App for OAuth login and repository access.
 
+Configure the app with:
+
+- **Callback URL**: `https://<web_app_url>/api/auth/callback/github`
+- **Account permissions**: Email addresses, read-only
+- **Repository permissions**: Contents, read and write; Pull requests, read and write; Metadata,
+  read-only
+- **Optional bot and automation permissions**: Issues, read and write for GitHub bot issue events;
+  Checks, read-only for `check_suite.completed` automations
+
+If users outside the app owner should sign in, set **Where can this GitHub App be installed?** to
+**Any account**.
+
+After creating the app:
+
+1. Generate a client secret and record the Client ID and Client Secret.
+2. Generate a private key and convert it to PKCS#8 format:
+   ```bash
+   openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt \
+     -in ~/Downloads/your-app-name.*.private-key.pem \
+     -out private-key-pkcs8.pem
+   ```
+3. Install the app on the repositories Surface may access.
+4. Record the Installation ID from the installation URL.
+
 Required values:
 
-- `github_client_id`
-- `github_client_secret`
-- `github_app_id`
-- `github_app_private_key`
-- `github_app_installation_id`
+- `github_client_id` from the GitHub App Client ID
+- `github_client_secret` from the generated client secret
+- `github_app_id` from the GitHub App App ID
+- `github_app_private_key` from `private-key-pkcs8.pem`
+- `github_app_installation_id` from the installed app URL
 
 Install the app only on repositories Surface should be able to clone, branch, push, and open pull
 requests against.

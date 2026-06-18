@@ -6,7 +6,7 @@ The supported stack is:
 
 - Cloudflare Workers, Durable Objects, D1, KV, and R2 for the web app and control plane
 - Modal for sandbox execution and repo image builds
-- GitHub OAuth plus one GitHub App installation for repository access
+- GitHub OAuth, optional Google OAuth, and one GitHub App installation for GitHub repository access
 
 There is no selectable web platform, sandbox backend, or source-control provider in this deployment
 module.
@@ -32,10 +32,13 @@ in:
 - Cloudflare account, API token, and Workers subdomain
 - Modal token, workspace, environment, and internal API secret
 - GitHub OAuth client credentials
-- GitHub App ID, private key, and installation ID
+- optional Google OAuth credentials, `google_client_id` and `google_client_secret`, if enabling
+  Google login
+- GitHub App ID, private key, and installation ID for repository access
 - Anthropic API key
 - encryption and callback secrets
-- at least one access-control allowlist
+- at least one access-control allowlist, either `allowed_users`, `allowed_email_domains`, or
+  `allowed_emails`
 
 Keep `terraform.tfvars` and `backend.tfvars` local and uncommitted.
 
