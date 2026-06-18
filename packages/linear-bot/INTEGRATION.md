@@ -46,8 +46,8 @@ own context (e.g. `agentSessionId` for Linear agent activities).
 1. User @mentions or assigns the agent → Linear sends `AgentSessionEvent`
 2. Agent emits `Thought` activities (visible as "thinking" in Linear)
 3. Agent creates Open-Inspect session and sends prompt
-4. Agent emits `Response` with session link
-5. On completion callback, agent emits `Response` with PR link
+4. Agent emits `Thought` with session link
+5. On completion callback, agent emits `Response` with final output or PR link
 
 ### Callback Context
 

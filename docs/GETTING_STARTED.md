@@ -91,6 +91,17 @@ cd terraform/environments/production
 cp terraform.tfvars.example terraform.tfvars
 ```
 
+Fill the provider-specific values from the sections above, plus these required app values:
+
+| Value | How to set it |
+| ----- | ------------- |
+| `anthropic_api_key` | Create an API key in the Anthropic Console. |
+| `token_encryption_key` | Generate with `openssl rand -base64 32`. |
+| `repo_secrets_encryption_key` | Generate with `openssl rand -base64 32`. |
+| `internal_callback_secret` | Generate with `openssl rand -base64 32`; Modal uses the same value as `INTERNAL_CALLBACK_SECRET`. |
+| `nextauth_secret` | Generate with `openssl rand -base64 32`. |
+| `deployment_name` | Use a unique, stable slug for resource names and URLs. |
+
 Create the R2 bucket used for Terraform state, then copy the backend config:
 
 ```bash

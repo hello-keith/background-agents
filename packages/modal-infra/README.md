@@ -89,6 +89,7 @@ modal secret create github-app \
 # Internal API secret (for control plane authentication)
 modal secret create internal-api \
   MODAL_API_SECRET="$(openssl rand -hex 32)" \
+  INTERNAL_CALLBACK_SECRET="<terraform-internal-callback-secret>" \
   ALLOWED_CONTROL_PLANE_HOSTS="your-control-plane.workers.dev"
 ```
 
@@ -174,6 +175,7 @@ Set via Modal secrets:
 | `GITHUB_APP_PRIVATE_KEY` | `github-app` | GitHub App private key (PKCS#8) |
 | `GITHUB_APP_INSTALLATION_ID` | `github-app` | GitHub App installation ID |
 | `MODAL_API_SECRET` | `internal-api` | Shared secret for control plane auth |
+| `INTERNAL_CALLBACK_SECRET` | `internal-api` | Shared secret for Modal to sign control plane callbacks; must match control plane `INTERNAL_CALLBACK_SECRET` |
 | `ALLOWED_CONTROL_PLANE_HOSTS` | `internal-api` | Comma-separated allowed hostnames for URL validation |
 
 ## Verification Criteria
