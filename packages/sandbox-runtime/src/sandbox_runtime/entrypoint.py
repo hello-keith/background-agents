@@ -5,10 +5,11 @@ Sandbox entrypoint - manages OpenCode server and bridge lifecycle.
 Runs as PID 1 inside the sandbox. Responsibilities:
 1. Perform git sync with latest code
 2. Run repo hooks (setup/start) based on boot mode
-3. Start OpenCode server
-4. Start bridge process for control plane communication
-5. Monitor processes and restart on crash with exponential backoff
-6. Handle graceful shutdown on SIGTERM/SIGINT
+3. Install configured OpenCode tools and skills
+4. Start OpenCode server
+5. Start bridge process for control plane communication
+6. Monitor processes and restart on crash with exponential backoff
+7. Handle graceful shutdown on SIGTERM/SIGINT
 """
 
 import asyncio
@@ -67,6 +68,7 @@ class SandboxSupervisor:
 
     Manages:
     - Git synchronization with base branch
+    - OpenCode tools and skills installation
     - OpenCode server process
     - Bridge process for control plane communication
     - Process monitoring with crash recovery

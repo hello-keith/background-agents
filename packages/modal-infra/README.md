@@ -33,11 +33,13 @@ This package provides the data plane for Open-Inspect:
 ### Images (`src/images/`)
 
 Base image definition with:
+
 - Debian slim + git, curl, build-essential
 - Node.js 22, pnpm, Bun
 - Python 3.12 with uv
 - OpenCode CLI
 - agent-browser CLI + headless Chrome
+- sandbox-runtime tools, bundled OpenCode skills, and optional plugin skill sync support
 
 ### Sandbox (`src/sandbox/`)
 
@@ -245,6 +247,10 @@ Set via Modal secrets:
 | `INTERNAL_CALLBACK_SECRET` | `internal-api` | Shared secret for Modal to sign control plane callbacks; must match control plane `INTERNAL_CALLBACK_SECRET` |
 | `CONTROL_PLANE_URL` | `internal-api` | Control-plane base URL used by scheduled repo image rebuilds |
 | `ALLOWED_CONTROL_PLANE_HOSTS` | `internal-api` | Comma-separated allowed hostnames for URL validation |
+
+OpenCode plugin skill sync is configured through global or repository secrets, not Modal secrets.
+Set `OPENCODE_SKILLS_REPO_URL` and `OPENCODE_SKILLS_REPO_PLUGINS` in the web Settings page; see
+[Secrets Management](../../docs/SECRETS.md#opencode-skills-from-a-plugin-repo).
 
 ## Verification Criteria
 
