@@ -182,7 +182,7 @@ export const MODEL_OPTIONS: ModelCategory[] = [
 
 /**
  * Models enabled by default when no preferences are stored.
- * Excludes zen models which must be opted into via settings.
+ * Excludes opt-in providers such as OpenCode Zen and DeepSeek, which must be enabled via settings.
  */
 export const DEFAULT_ENABLED_MODELS: ValidModel[] = [
   "anthropic/claude-haiku-4-5",

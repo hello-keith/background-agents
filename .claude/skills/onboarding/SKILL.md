@@ -316,7 +316,34 @@ session, send prompt.
 
 ## Phase 13: CI/CD Setup (Optional)
 
-Ask if user wants GitHub Actions CI/CD. If yes, use `gh secret set` for all required secrets.
+Ask if user wants GitHub Actions CI/CD. If yes, read `.github/workflows/terraform.yml` first and use
+`gh secret set` for the workflow secrets it consumes.
+
+Current required secrets:
+
+- `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKER_SUBDOMAIN`
+- `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
+- `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`, `MODAL_WORKSPACE`, `MODAL_API_SECRET`
+- `GH_OAUTH_CLIENT_ID`, `GH_OAUTH_CLIENT_SECRET`, `GH_APP_ID`, `GH_APP_PRIVATE_KEY`,
+  `GH_APP_INSTALLATION_ID`
+- `ANTHROPIC_API_KEY`, `TOKEN_ENCRYPTION_KEY`, `REPO_SECRETS_ENCRYPTION_KEY`,
+  `INTERNAL_CALLBACK_SECRET`, `NEXTAUTH_SECRET`, `DEPLOYMENT_NAME`
+
+Set at least one access-control secret: `ALLOWED_USERS`, `ALLOWED_EMAIL_DOMAINS`, or
+`ALLOWED_EMAILS`.
+
+Current optional secrets:
+
+- `MODAL_ENVIRONMENT`, `MODAL_ENVIRONMENT_WEB_SUFFIX`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `ENABLE_SLACK_BOT`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`
+- `ENABLE_GITHUB_BOT`, `GH_WEBHOOK_SECRET`, `GH_BOT_USERNAME`
+- `APP_NAME`, `APP_SHORT_NAME`, `APP_ICON_URL`
+- `ENABLE_LINEAR_BOT`, `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET`, `LINEAR_WEBHOOK_SECRET`
+- `ENABLE_DURABLE_OBJECT_BINDINGS`
+
+Do not set removed Vercel or Daytona secrets; this workflow deploys Cloudflare Workers, Modal, and
+Terraform only.
 
 ## Error Handling
 

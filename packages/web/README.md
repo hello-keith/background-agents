@@ -176,7 +176,7 @@ npm run build
 - Streaming content display
 - Participant presence list
 - Stop button during execution
-- Artifacts sidebar (PRs, screenshots)
+- Artifacts sidebar (PRs, screenshots, videos)
 
 ## WebSocket Protocol
 

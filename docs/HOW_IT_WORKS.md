@@ -302,8 +302,8 @@ Here's what happens when you send a prompt:
 6. **Control plane broadcasts**: Events are stored in the session database and broadcast to all
    connected clients in real-time.
 
-7. **Artifacts are created**: If the agent creates a PR or captures a screenshot, these are stored
-   as artifacts and announced to clients.
+7. **Artifacts are created**: If the agent creates a PR or uploads screenshot or video media, these
+   are stored as artifacts and announced to clients.
 
 ### Prompt Queuing
 

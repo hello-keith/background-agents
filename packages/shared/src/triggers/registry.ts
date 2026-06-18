@@ -8,14 +8,14 @@ import { sentrySource, sentryConditions } from "./sentry";
 import { webhookSource, webhookConditions } from "./webhook";
 import { githubSource } from "./github";
 
-// GitHub and Linear condition handlers (stubs for Phase 2c).
+// Shared GitHub and Linear condition handlers.
 // These need to exist so that the ConditionRegistry is complete.
 import { matchGlob } from "./glob";
 import type { AutomationEvent } from "./types";
 
 /**
  * GitHub + Linear condition handlers defined here (cross-source).
- * Will move to source modules when those ship in Phase 2c.
+ * GitHub event automations are active; Linear conditions stay here until a Linear source is registered.
  */
 const sharedConditions = {
   branch: {
