@@ -175,6 +175,47 @@ Response:
 The route trims blank optional fields, links identities by provider ID, and may link providers by
 email through `UserStore.resolveOrCreateUser`.
 
+### Integration Settings
+
+Supported integration IDs are `github`, `linear`, `code-server`, `sandbox`, and `slack`. All
+integration settings routes require internal control-plane authentication.
+
+| Endpoint                                             | Method | Description                    |
+| ---------------------------------------------------- | ------ | ------------------------------ |
+| `/integration-settings/:id`                          | GET    | Get global settings            |
+| `/integration-settings/:id`                          | PUT    | Update global settings         |
+| `/integration-settings/:id`                          | DELETE | Delete global settings         |
+| `/integration-settings/:id/repos`                    | GET    | List repo overrides            |
+| `/integration-settings/:id/repos/:owner/:name`       | GET    | Get repo override              |
+| `/integration-settings/:id/repos/:owner/:name`       | PUT    | Update repo override           |
+| `/integration-settings/:id/repos/:owner/:name`       | DELETE | Delete repo override           |
+| `/integration-settings/:id/resolved/:owner/:name`    | GET    | Get merged runtime config      |
+
+Global writes accept `{ "settings": { "defaults": ..., "enabledRepos": ... } }`. Repo writes
+accept `{ "settings": ... }`. `enabledRepos` is `null` when all repos are enabled, an empty array
+when no repos are enabled, or a lowercased allowlist.
+
+`GET /integration-settings/:id/resolved/:owner/:name` returns `{ integrationId, repo, config }`
+after applying global defaults, repo overrides, and runtime defaults. For `sandbox`, `config`
+contains:
+
+```json
+{
+  "tunnelPorts": [],
+  "terminalEnabled": false,
+  "maxConcurrentChildSessions": 5,
+  "maxTotalChildSessions": 15,
+  "cpuCores": null,
+  "memoryMib": null,
+  "enabledRepos": null
+}
+```
+
+Sandbox repo settings override only defined keys. `cpuCores` must be a positive number and
+`memoryMib` must be a positive integer in MiB. For those resource fields, an undefined repo value
+inherits the global default, while `null` explicitly uses the provider default instead of
+inheriting.
+
 ### Create PR Payload
 
 `POST /sessions/:id/pr` accepts:

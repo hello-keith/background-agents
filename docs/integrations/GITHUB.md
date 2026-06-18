@@ -30,13 +30,15 @@ App or deploying the bot worker, start with
 | Workflow                  | How it works                                                               |
 | ------------------------- | -------------------------------------------------------------------------- |
 | Auto-review new PRs       | Review non-draft PRs when they are opened, if auto-review is enabled       |
+| Manual review request     | Assign the GitHub App bot as a PR reviewer                                 |
 | Respond to PR comments    | Mention the bot in a PR conversation comment                               |
 | Respond to review threads | Mention the bot in an inline review comment                                |
 | Post back to GitHub       | Submit a PR review, reply to a review thread, or post a PR summary comment |
 | Customize behavior        | Set repository scope, trigger users, models, and custom instructions       |
 
-Open-Inspect does not use GitHub slash commands today, and it does not support requesting the GitHub
-App bot through the PR reviewer picker. Use auto-review or `@mention` comments instead.
+Open-Inspect does not use GitHub slash commands today. The PR reviewer picker is supported as a
+compatibility path for manual code review requests; auto-review and `@mention` comments remain the
+recommended day-to-day workflows.
 
 ---
 

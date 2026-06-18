@@ -34,7 +34,7 @@ Create one GitHub App for OAuth login and repository access.
 
 Configure the app with:
 
-- **Callback URL**: `https://<web_app_url>/api/auth/callback/github`
+- **Callback URL**: `<web_app_url>/api/auth/callback/github`
 - **Account permissions**: Email addresses, read-only
 - **Repository permissions**: Contents, read and write; Pull requests, read and write; Metadata,
   read-only
@@ -72,7 +72,7 @@ requests against.
 Create a Google OAuth Web client and add this production redirect URI:
 
 ```text
-https://<web_app_url>/api/auth/callback/google
+<web_app_url>/api/auth/callback/google
 ```
 
 Set both Terraform values to enable Google login:
