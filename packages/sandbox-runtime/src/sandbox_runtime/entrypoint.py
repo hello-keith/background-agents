@@ -5,10 +5,11 @@ Sandbox entrypoint - manages OpenCode server and bridge lifecycle.
 Runs as PID 1 inside the sandbox. Responsibilities:
 1. Perform git sync with latest code
 2. Run repo hooks (setup/start) based on boot mode
-3. Start OpenCode server
-4. Start bridge process for control plane communication
-5. Monitor processes and restart on crash with exponential backoff
-6. Handle graceful shutdown on SIGTERM/SIGINT
+3. Install configured OpenCode tools and skills
+4. Start OpenCode server
+5. Start bridge process for control plane communication
+6. Monitor processes and restart on crash with exponential backoff
+7. Handle graceful shutdown on SIGTERM/SIGINT
 """
 
 import asyncio
@@ -67,6 +68,7 @@ class SandboxSupervisor:
 
     Manages:
     - Git synchronization with base branch
+    - OpenCode tools and skills installation
     - OpenCode server process
     - Bridge process for control plane communication
     - Process monitoring with crash recovery
@@ -87,6 +89,15 @@ class SandboxSupervisor:
     CLONE_DEPTH_COMMITS = 100
     SIDECAR_TIMEOUT_SECONDS = 5
     MCP_PACKAGE_INSTALL_TIMEOUT_SECONDS = 180
+    OPENCODE_SKILLS_SYNC_TIMEOUT_SECONDS = 60
+    OPENCODE_SKILLS_REPO_URL_ENV = "OPENCODE_SKILLS_REPO_URL"
+    OPENCODE_SKILLS_REPO_REF_ENV = "OPENCODE_SKILLS_REPO_REF"
+    OPENCODE_SKILLS_REPO_PLUGINS_ENV = "OPENCODE_SKILLS_REPO_PLUGINS"
+    OPENCODE_SKILLS_REPO_ROOT_ENV = "OPENCODE_SKILLS_REPO_ROOT"
+    OPENCODE_SKILLS_DEFAULT_REF = "main"
+    OPENCODE_SKILLS_DEFAULT_REPO_ROOT = "plugins"
+    OPENCODE_SKILLS_CHECKOUT_PATH = Path("/tmp/opencode-skills-repo")
+    _OPENCODE_PLUGIN_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
     def __init__(self) -> None:
         self.opencode_process: asyncio.subprocess.Process | None = None
@@ -519,6 +530,169 @@ class SandboxSupervisor:
         if installed_any:
             self.log.info("opencode.skills_installed", skills_path=str(skills_dest))
 
+    def _parse_opencode_skills_plugins(self) -> list[str]:
+        """Parse the configured plugin list for external OpenCode skill sync."""
+        raw_plugins = os.environ.get(self.OPENCODE_SKILLS_REPO_PLUGINS_ENV, "")
+        plugins: list[str] = []
+        for raw_plugin in raw_plugins.split(","):
+            plugin = raw_plugin.strip()
+            if plugin and plugin not in plugins:
+                plugins.append(plugin)
+        return plugins
+
+    def _resolve_opencode_skills_repo_root(self) -> str:
+        """Return a safe relative plugin root within the configured skills repo."""
+        repo_root = (
+            os.environ.get(self.OPENCODE_SKILLS_REPO_ROOT_ENV, "").strip()
+            or self.OPENCODE_SKILLS_DEFAULT_REPO_ROOT
+        )
+        root_path = Path(repo_root)
+        if root_path.is_absolute() or any(part in ("", "..") for part in root_path.parts):
+            self.log.warn(
+                "opencode.external_skills.invalid_repo_root",
+                repo_root=repo_root,
+                fallback=self.OPENCODE_SKILLS_DEFAULT_REPO_ROOT,
+            )
+            return self.OPENCODE_SKILLS_DEFAULT_REPO_ROOT
+        return repo_root
+
+    async def _run_opencode_skills_git(
+        self,
+        *args: str,
+        cwd: Path | None = None,
+    ) -> bool:
+        """Run one git command for external skill sync."""
+        proc = await asyncio.create_subprocess_exec(
+            "git",
+            *args,
+            cwd=cwd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            _stdout, stderr = await asyncio.wait_for(
+                proc.communicate(),
+                timeout=self.OPENCODE_SKILLS_SYNC_TIMEOUT_SECONDS,
+            )
+        except TimeoutError:
+            proc.kill()
+            await proc.wait()
+            self.log.warn(
+                "opencode.external_skills.git_timeout",
+                args=list(args[:2]),
+                timeout_seconds=self.OPENCODE_SKILLS_SYNC_TIMEOUT_SECONDS,
+            )
+            return False
+
+        if proc.returncode == 0:
+            return True
+
+        self.log.warn(
+            "opencode.external_skills.git_failed",
+            args=list(args[:2]),
+            exit_code=proc.returncode,
+            stderr=self._redact_git_stderr((stderr or b"").decode(errors="replace")),
+        )
+        return False
+
+    async def _checkout_opencode_skills_repo(
+        self, repo_url: str, repo_ref: str, checkout_path: Path
+    ) -> bool:
+        """Fetch a single ref from the configured skills repo into checkout_path."""
+        if checkout_path.exists():
+            shutil.rmtree(checkout_path)
+        checkout_path.mkdir(parents=True)
+
+        if not await self._run_opencode_skills_git("init", cwd=checkout_path):
+            return False
+        if not await self._run_opencode_skills_git(
+            "remote", "add", "origin", repo_url, cwd=checkout_path
+        ):
+            return False
+        if not await self._run_opencode_skills_git(
+            "fetch", "--depth", "1", "origin", repo_ref, cwd=checkout_path
+        ):
+            return False
+        return await self._run_opencode_skills_git(
+            "checkout", "--detach", "FETCH_HEAD", cwd=checkout_path
+        )
+
+    def _install_opencode_skills_from_plugin_repo(
+        self,
+        checkout_path: Path,
+        plugin_names: list[str],
+        repo_root: str,
+    ) -> int:
+        """Copy selected plugin skill directories into OpenCode's global skills directory."""
+        skills_dest = Path.home() / ".config" / "opencode" / "skills"
+        installed_count = 0
+
+        for plugin_name in plugin_names:
+            if not self._OPENCODE_PLUGIN_NAME_RE.match(plugin_name):
+                self.log.warn("opencode.external_skills.invalid_plugin_name", plugin=plugin_name)
+                continue
+
+            plugin_skills_dir = checkout_path / repo_root / plugin_name / "skills"
+            if not plugin_skills_dir.is_dir():
+                self.log.warn(
+                    "opencode.external_skills.plugin_missing",
+                    plugin=plugin_name,
+                    skills_path=str(plugin_skills_dir),
+                )
+                continue
+
+            for skill_dir in plugin_skills_dir.iterdir():
+                skill_file = skill_dir / "SKILL.md"
+                if not skill_dir.is_dir() or not skill_file.exists():
+                    continue
+
+                dest_dir = skills_dest / skill_dir.name
+                if dest_dir.exists():
+                    shutil.rmtree(dest_dir)
+                shutil.copytree(
+                    skill_dir,
+                    dest_dir,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
+                    symlinks=True,
+                )
+                installed_count += 1
+
+        if installed_count:
+            self.log.info(
+                "opencode.external_skills.installed",
+                count=installed_count,
+                skills_path=str(skills_dest),
+            )
+        return installed_count
+
+    async def _install_configured_opencode_skills(self) -> None:
+        """Sync OpenCode skills from a configured plugin repo, if enabled."""
+        repo_url = os.environ.get(self.OPENCODE_SKILLS_REPO_URL_ENV, "").strip()
+        plugin_names = self._parse_opencode_skills_plugins()
+        if not repo_url or not plugin_names:
+            return
+
+        repo_ref = (
+            os.environ.get(self.OPENCODE_SKILLS_REPO_REF_ENV, "").strip()
+            or self.OPENCODE_SKILLS_DEFAULT_REF
+        )
+        repo_root = self._resolve_opencode_skills_repo_root()
+        checkout_path = self.OPENCODE_SKILLS_CHECKOUT_PATH
+
+        self.log.info(
+            "opencode.external_skills.sync_start",
+            ref=repo_ref,
+            plugins=plugin_names,
+            repo_root=repo_root,
+        )
+
+        try:
+            if not await self._checkout_opencode_skills_repo(repo_url, repo_ref, checkout_path):
+                return
+            self._install_opencode_skills_from_plugin_repo(checkout_path, plugin_names, repo_root)
+        except Exception as e:
+            self.log.warn("opencode.external_skills.sync_error", exc=e)
+
     def _setup_openai_oauth(self) -> None:
         """Write OpenCode auth.json for ChatGPT OAuth if refresh token is configured."""
         refresh_token = os.environ.get("OPENAI_OAUTH_REFRESH_TOKEN")
@@ -817,6 +991,7 @@ class SandboxSupervisor:
         if self.repo_path.exists() and (self.repo_path / ".git").exists():
             workdir = self.repo_path
 
+        await self._install_configured_opencode_skills()
         self._install_tools(workdir)
         self._install_skills(workdir)
         self._install_bin_scripts()

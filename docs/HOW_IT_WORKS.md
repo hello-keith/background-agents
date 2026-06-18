@@ -143,6 +143,7 @@ development environment.
 - Package managers: npm, pnpm, pip, uv
 - agent-browser CLI + headless Chrome (for browser automation)
 - OpenCode (the coding agent)
+- Bundled OpenCode tools and skills, plus optional plugin-distributed skills synced at startup
 
 Surface uses one sandbox backend:
 
@@ -176,10 +177,10 @@ cloud.
 When you create a session for a repo without an existing snapshot:
 
 ```
-┌─────────┐    ┌──────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌───────┐
-│ Sandbox │───▶│ Git Sync │───▶│ Setup Script│───▶│ Start Script│───▶│ Agent Start │───▶│ Ready │
-│ Created │    │ (clone)  │    │ (optional)  │    │ (optional)  │    │ (OpenCode)  │    │       │
-└─────────┘    └──────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └───────┘
+┌─────────┐    ┌──────────┐    ┌─────────────┐    ┌─────────────┐    ┌────────────┐    ┌─────────────┐    ┌───────┐
+│ Sandbox │───▶│ Git Sync │───▶│ Setup Script│───▶│ Start Script│───▶│ Agent Prep │───▶│ Agent Start │───▶│ Ready │
+│ Created │    │ (clone)  │    │ (optional)  │    │ (optional)  │    │tools/skills│    │ OpenCode    │    │       │
+└─────────┘    └──────────┘    └─────────────┘    └─────────────┘    └────────────┘    └─────────────┘    └───────┘
                                      │                    │
                                      ▼                    ▼
                             .openinspect/setup.sh   .openinspect/start.sh
@@ -190,24 +191,27 @@ When you create a session for a repo without an existing snapshot:
    helper
 3. **Setup script**: Runs `.openinspect/setup.sh` for provisioning (if present)
 4. **Start script**: Runs `.openinspect/start.sh` for runtime startup (if present)
-5. **Agent start**: OpenCode server starts and connects back to the control plane
-6. **Ready**: Sandbox accepts prompts
+5. **Agent preparation**: Installs bundled tools and skills; syncs configured plugin skills
+6. **Agent start**: OpenCode server starts and connects back to the control plane
+7. **Ready**: Sandbox accepts prompts
 
 ### Restore (From Snapshot)
 
 When restoring from a previous snapshot:
 
 ```
-┌─────────────┐    ┌────────────┐    ┌─────────────┐    ┌───────┐
-│  Restore    │───▶│ Quick Sync │───▶│ Start Script│───▶│ Ready │
-│  Snapshot   │    │ (git pull) │    │ (optional)  │    │       │
-└─────────────┘    └────────────┘    └─────────────┘    └───────┘
+┌─────────────┐    ┌────────────┐    ┌─────────────┐    ┌────────────┐    ┌─────────────┐    ┌───────┐
+│  Restore    │───▶│ Quick Sync │───▶│ Start Script│───▶│ Agent Prep │───▶│ Agent Start │───▶│ Ready │
+│  Snapshot   │    │ (git pull) │    │ (optional)  │    │tools/skills│    │ OpenCode    │    │       │
+└─────────────┘    └────────────┘    └─────────────┘    └────────────┘    └─────────────┘    └───────┘
 ```
 
 1. **Restore snapshot**: Modal restores the filesystem from a saved snapshot
 2. **Quick sync**: Pulls latest changes (usually just a few commits)
 3. **Start script**: Runs `.openinspect/start.sh` for runtime startup (if present)
-4. **Ready**: Sandbox is ready almost instantly
+4. **Agent preparation**: Installs bundled tools and skills; syncs configured plugin skills
+5. **Agent start**: OpenCode server starts and connects back to the control plane
+6. **Ready**: Sandbox is ready almost instantly
 
 Snapshots include installed dependencies, built artifacts, and workspace state. This is why
 follow-up prompts in an existing session are much faster than the first prompt.
@@ -219,7 +223,9 @@ When starting from a pre-built repo image:
 1. **Incremental git sync**: Fast fetch + hard reset to latest branch head
 2. **Setup skipped**: `.openinspect/setup.sh` already ran when the image was built
 3. **Start script runs**: `.openinspect/start.sh` executes for per-session runtime startup
-4. **Ready**: Agent starts once runtime hook succeeds
+4. **Agent preparation**: Installs bundled tools and skills; syncs configured plugin skills
+5. **Agent start**: OpenCode server starts and connects back to the control plane
+6. **Ready**: Sandbox accepts prompts
 
 If `start.sh` exists and fails, startup fails fast instead of continuing with a broken runtime.
 
@@ -482,6 +488,10 @@ You can configure environment variables (API keys, credentials) at global or per
 > **DeepSeek**: DeepSeek models require `DEEPSEEK_API_KEY` as a global or repository secret. Repo
 > secrets override global values. Modal injects Anthropic credentials through its own secrets
 > mechanism.
+
+Optional OpenCode plugin skills use global or repository secrets named `OPENCODE_SKILLS_REPO_*`.
+When configured, the sandbox fetches the plugin repo before OpenCode starts and copies selected
+`skills/*/SKILL.md` directories into `~/.config/opencode/skills`.
 
 See [Secrets Management](./SECRETS.md) for setup instructions.
 

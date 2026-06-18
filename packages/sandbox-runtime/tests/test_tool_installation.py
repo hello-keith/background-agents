@@ -385,3 +385,92 @@ class TestInstallSkills:
             sup._install_skills(workdir)
 
         assert not (workdir / ".opencode" / "skills").exists()
+
+
+class TestInstallExternalOpenCodeSkills:
+    """Cases for installing configured plugin skills into OpenCode's global skills path."""
+
+    def test_plugin_skill_directories_are_copied_to_global_skills(self, tmp_path):
+        """Selected plugin skills should copy from the checkout into ~/.config/opencode/skills."""
+        sup = _make_supervisor()
+        checkout = tmp_path / "checkout"
+        skills_dir = checkout / "plugins" / "straddle-engineering" / "skills"
+
+        code_review_dir = skills_dir / "code-review"
+        references_dir = code_review_dir / "references"
+        references_dir.mkdir(parents=True)
+        (code_review_dir / "SKILL.md").write_text("# code-review")
+        (references_dir / "rubric.md").write_text("Use this rubric")
+
+        testing_dir = skills_dir / "testing"
+        testing_dir.mkdir()
+        (testing_dir / "SKILL.md").write_text("# testing")
+
+        ignored_dir = skills_dir / "not-a-skill"
+        ignored_dir.mkdir()
+        (ignored_dir / "README.md").write_text("missing SKILL.md")
+
+        existing_file = (
+            tmp_path / "home" / ".config" / "opencode" / "skills" / "code-review" / "old.txt"
+        )
+        existing_file.parent.mkdir(parents=True)
+        existing_file.write_text("old content")
+
+        with patch.dict("os.environ", {"HOME": str(tmp_path / "home")}):
+            installed = sup._install_opencode_skills_from_plugin_repo(
+                checkout,
+                ["straddle-engineering"],
+                "plugins",
+            )
+
+        skills_dest = tmp_path / "home" / ".config" / "opencode" / "skills"
+        assert installed == 2
+        assert (skills_dest / "code-review" / "SKILL.md").read_text() == "# code-review"
+        assert (
+            skills_dest / "code-review" / "references" / "rubric.md"
+        ).read_text() == "Use this rubric"
+        assert not (skills_dest / "code-review" / "old.txt").exists()
+        assert (skills_dest / "testing" / "SKILL.md").read_text() == "# testing"
+        assert not (skills_dest / "not-a-skill").exists()
+
+    def test_parse_plugins_deduplicates_and_trims(self):
+        """The plugin list should be stable even when configured with whitespace."""
+        sup = _make_supervisor()
+
+        with patch.dict(
+            "os.environ",
+            {
+                "OPENCODE_SKILLS_REPO_PLUGINS": " straddle-engineering, straddle-product, straddle-engineering ,, ",
+            },
+        ):
+            assert sup._parse_opencode_skills_plugins() == [
+                "straddle-engineering",
+                "straddle-product",
+            ]
+
+    def test_invalid_plugin_names_are_skipped(self, tmp_path):
+        """Plugin names are path segments, not arbitrary relative paths."""
+        sup = _make_supervisor()
+        checkout = tmp_path / "checkout"
+        skills_dir = checkout / "plugins" / "straddle-engineering" / "skills" / "code-review"
+        skills_dir.mkdir(parents=True)
+        (skills_dir / "SKILL.md").write_text("# code-review")
+
+        with patch.dict("os.environ", {"HOME": str(tmp_path / "home")}):
+            installed = sup._install_opencode_skills_from_plugin_repo(
+                checkout,
+                ["../bad", "straddle-engineering"],
+                "plugins",
+            )
+
+        assert installed == 1
+        skills_dest = tmp_path / "home" / ".config" / "opencode" / "skills"
+        assert (skills_dest / "code-review" / "SKILL.md").exists()
+        assert not (tmp_path / "home" / ".config" / "opencode" / "bad").exists()
+
+    def test_invalid_repo_root_falls_back_to_plugins(self):
+        """The plugin root must stay inside the checked-out repo."""
+        sup = _make_supervisor()
+
+        with patch.dict("os.environ", {"OPENCODE_SKILLS_REPO_ROOT": "../outside"}):
+            assert sup._resolve_opencode_skills_repo_root() == "plugins"

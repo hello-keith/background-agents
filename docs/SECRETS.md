@@ -111,15 +111,41 @@ If you try to save a reserved key, the UI will show a validation error.
 
 ## Common Examples
 
-| Key                          | Scope          | Purpose                                               |
-| ---------------------------- | -------------- | ----------------------------------------------------- |
-| `ANTHROPIC_API_KEY`          | Modal          | Claude API access                                     |
-| `DEEPSEEK_API_KEY`           | Global or Repo | DeepSeek API access                                   |
-| `OPENAI_OAUTH_REFRESH_TOKEN` | Global or Repo | OpenAI Codex access ([setup guide](OPENAI_MODELS.md)) |
-| `OPENAI_OAUTH_ACCOUNT_ID`    | Global or Repo | OpenAI Codex access ([setup guide](OPENAI_MODELS.md)) |
-| `DATABASE_URL`               | Repo           | Database connection string                            |
-| `AWS_ACCESS_KEY_ID`          | Repo           | AWS credentials for a specific project                |
-| `STRIPE_SECRET_KEY`          | Repo           | Stripe API key for a specific project                 |
+| Key                            | Scope          | Purpose                                               |
+| ------------------------------ | -------------- | ----------------------------------------------------- |
+| `ANTHROPIC_API_KEY`            | Modal          | Claude API access                                     |
+| `DEEPSEEK_API_KEY`             | Global or Repo | DeepSeek API access                                   |
+| `OPENAI_OAUTH_REFRESH_TOKEN`   | Global or Repo | OpenAI Codex access ([setup guide](OPENAI_MODELS.md)) |
+| `OPENAI_OAUTH_ACCOUNT_ID`      | Global or Repo | OpenAI Codex access ([setup guide](OPENAI_MODELS.md)) |
+| `OPENCODE_SKILLS_REPO_URL`     | Global or Repo | Git repo to sync OpenCode skills from                 |
+| `OPENCODE_SKILLS_REPO_REF`     | Global or Repo | Optional branch, tag, or commit; defaults to `main`   |
+| `OPENCODE_SKILLS_REPO_PLUGINS` | Global or Repo | Comma-separated plugin directories to install from    |
+| `OPENCODE_SKILLS_REPO_ROOT`    | Global or Repo | Optional plugin root directory; defaults to `plugins` |
+| `DATABASE_URL`                 | Repo           | Database connection string                            |
+| `AWS_ACCESS_KEY_ID`            | Repo           | AWS credentials for a specific project                |
+| `STRIPE_SECRET_KEY`            | Repo           | Stripe API key for a specific project                 |
+
+---
+
+### OpenCode Skills from a Plugin Repo
+
+To make plugin-distributed skills available inside new sandboxes, configure these secrets:
+
+```env
+OPENCODE_SKILLS_REPO_URL=https://github.com/straddleio/agentland.git
+OPENCODE_SKILLS_REPO_REF=main
+OPENCODE_SKILLS_REPO_ROOT=plugins
+OPENCODE_SKILLS_REPO_PLUGINS=straddle-engineering,straddle-harness
+```
+
+`OPENCODE_SKILLS_REPO_URL` and `OPENCODE_SKILLS_REPO_PLUGINS` are required to enable the sync.
+`OPENCODE_SKILLS_REPO_REF` defaults to `main`; `OPENCODE_SKILLS_REPO_ROOT` defaults to `plugins`.
+
+At sandbox startup, Open-Inspect checks out the configured ref and copies each selected plugin's
+`skills/*/SKILL.md` directories into OpenCode's global skills directory,
+`~/.config/opencode/skills`. Plugin names must be directory names under the configured root. The
+plugin repo must be readable by the sandbox git credentials. If the sync fails, startup continues
+and the supervisor logs `opencode.external_skills.*` events for troubleshooting.
 
 ---
 
