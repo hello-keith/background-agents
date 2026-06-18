@@ -117,9 +117,29 @@ If you try to save a reserved key, the UI will show a validation error.
 | `DEEPSEEK_API_KEY`           | Global or Repo | DeepSeek API access                                   |
 | `OPENAI_OAUTH_REFRESH_TOKEN` | Global or Repo | OpenAI Codex access ([setup guide](OPENAI_MODELS.md)) |
 | `OPENAI_OAUTH_ACCOUNT_ID`    | Global or Repo | OpenAI Codex access ([setup guide](OPENAI_MODELS.md)) |
+| `OPENCODE_SKILLS_REPO_URL`   | Global or Repo | Git repo to sync OpenCode skills from                  |
+| `OPENCODE_SKILLS_REPO_REF`   | Global or Repo | Optional branch, tag, or commit; defaults to `main`    |
+| `OPENCODE_SKILLS_REPO_PLUGINS` | Global or Repo | Comma-separated plugin directories to install skills from |
+| `OPENCODE_SKILLS_REPO_ROOT`  | Global or Repo | Optional plugin root directory; defaults to `plugins`  |
 | `DATABASE_URL`               | Repo           | Database connection string                            |
 | `AWS_ACCESS_KEY_ID`          | Repo           | AWS credentials for a specific project                |
 | `STRIPE_SECRET_KEY`          | Repo           | Stripe API key for a specific project                 |
+
+---
+
+### OpenCode Skills from a Plugin Repo
+
+To make plugin-distributed skills available inside new sandboxes, configure these secrets:
+
+```env
+OPENCODE_SKILLS_REPO_URL=https://github.com/straddleio/agentland.git
+OPENCODE_SKILLS_REPO_REF=main
+OPENCODE_SKILLS_REPO_PLUGINS=straddle-engineering,straddle-harness
+```
+
+At sandbox startup, Open-Inspect checks out the configured ref and copies each selected plugin's
+`skills/*/SKILL.md` directories into OpenCode's global skills directory,
+`~/.config/opencode/skills`. The plugin repo must be readable by the sandbox git credentials.
 
 ---
 
