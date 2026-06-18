@@ -215,8 +215,8 @@ Every session runs in an isolated sandbox backend with a full development enviro
 - **Pre-installed:** Node.js 22, Python 3.12, Bun, git, GitHub CLI, build-essential
 - **Browser automation:** agent-browser CLI with headless Chromium for screenshots, visual diffs,
   and UI verification
-- **OpenCode skills:** Bundled sandbox skills are installed automatically; optional plugin-distributed
-  skills can be synced from a configured Git repo at startup
+- **OpenCode skills:** Bundled sandbox skills are installed automatically; optional
+  plugin-distributed skills can be synced from a configured Git repo at startup
 - **Code-server:** Optional browser-based VS Code connected to the session workspace
 - **Web terminal:** ttyd-powered terminal accessible from the session UI
 - **Port tunneling:** Expose up to 10 dev server ports via encrypted tunnels. URLs are available

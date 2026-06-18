@@ -158,16 +158,16 @@ Wide events use `outcome` to indicate result:
 
 #### OpenCode External Skills (`component: "supervisor"`)
 
-| Event                                           | Level | Key Fields                     | Description                         |
-| ----------------------------------------------- | ----- | ------------------------------ | ----------------------------------- |
-| `opencode.external_skills.sync_start`           | info  | `ref`, `plugins`, `repo_root`  | Plugin skill sync started           |
-| `opencode.external_skills.installed`            | info  | `count`, `skills_path`         | Plugin skills installed             |
-| `opencode.external_skills.git_failed`           | warn  | `args`, `exit_code`, `stderr`  | Plugin repo git command failed      |
-| `opencode.external_skills.git_timeout`          | warn  | `args`, `timeout_seconds`      | Plugin repo git command timed out   |
-| `opencode.external_skills.invalid_repo_root`    | warn  | `repo_root`, `fallback`        | Unsafe plugin root ignored          |
-| `opencode.external_skills.invalid_plugin_name`  | warn  | `plugin`                       | Unsafe plugin name skipped          |
-| `opencode.external_skills.plugin_missing`       | warn  | `plugin`, `skills_path`        | Plugin has no skills directory      |
-| `opencode.external_skills.sync_error`           | warn  | `exc`                          | Unexpected plugin sync error        |
+| Event                                          | Level | Key Fields                    | Description                       |
+| ---------------------------------------------- | ----- | ----------------------------- | --------------------------------- |
+| `opencode.external_skills.sync_start`          | info  | `ref`, `plugins`, `repo_root` | Plugin skill sync started         |
+| `opencode.external_skills.installed`           | info  | `count`, `skills_path`        | Plugin skills installed           |
+| `opencode.external_skills.git_failed`          | warn  | `args`, `exit_code`, `stderr` | Plugin repo git command failed    |
+| `opencode.external_skills.git_timeout`         | warn  | `args`, `timeout_seconds`     | Plugin repo git command timed out |
+| `opencode.external_skills.invalid_repo_root`   | warn  | `repo_root`, `fallback`       | Unsafe plugin root ignored        |
+| `opencode.external_skills.invalid_plugin_name` | warn  | `plugin`                      | Unsafe plugin name skipped        |
+| `opencode.external_skills.plugin_missing`      | warn  | `plugin`, `skills_path`       | Plugin has no skills directory    |
+| `opencode.external_skills.sync_error`          | warn  | `exc`                         | Unexpected plugin sync error      |
 
 #### Bridge (`component: "bridge"`)
 
