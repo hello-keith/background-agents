@@ -153,7 +153,7 @@ Linear user preferences are currently admin/API-managed, not set from a self-ser
 - Linear webhooks are verified before Open-Inspect acts on them.
 - Linear OAuth tokens, webhook secrets, and callback secrets stay server-side.
 - Linear does not provide Git credentials. Repository access still comes from the deployment's
-  configured source-control integration, such as the GitHub App installation.
+  GitHub App installation.
 - Repository scope in Linear settings controls which resolved repositories can receive
   Linear-started sessions.
 - Linear issue titles, descriptions, comments, and agent prompts may be sent to the coding agent. Do
@@ -196,5 +196,5 @@ scope. If an issue is ambiguous, include the intended `owner/repo` in the issue 
 
 ### The agent is active in too many repositories
 
-Limit the source-control installation to intended repositories, or set **Repository Scope** to
+Limit the GitHub App installation to intended repositories, or set **Repository Scope** to
 **Selected repositories** in the Linear integration settings.

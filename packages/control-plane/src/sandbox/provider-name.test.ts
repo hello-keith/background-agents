@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { resolveSandboxBackendName, isModalSandboxBackend } from "./provider-name";
+import {
+  resolveSandboxBackendName,
+  isModalSandboxBackend,
+  supportsRepoImageBackend,
+} from "./provider-name";
 
 describe("resolveSandboxBackendName", () => {
   it("defaults to modal when undefined", () => {
@@ -18,22 +22,21 @@ describe("resolveSandboxBackendName", () => {
     expect(resolveSandboxBackendName("modal")).toBe("modal");
   });
 
-  it('returns "daytona" for "daytona"', () => {
-    expect(resolveSandboxBackendName("daytona")).toBe("daytona");
-  });
-
   it("is case-insensitive", () => {
     expect(resolveSandboxBackendName("MODAL")).toBe("modal");
-    expect(resolveSandboxBackendName("Daytona")).toBe("daytona");
-    expect(resolveSandboxBackendName("DAYTONA")).toBe("daytona");
   });
 
   it("trims whitespace", () => {
     expect(resolveSandboxBackendName("  modal  ")).toBe("modal");
-    expect(resolveSandboxBackendName("  daytona  ")).toBe("daytona");
   });
 
   it("throws for unsupported provider", () => {
+    expect(() => resolveSandboxBackendName("unsupported-a")).toThrow(
+      "Unsupported SANDBOX_PROVIDER: unsupported-a"
+    );
+    expect(() => resolveSandboxBackendName("unsupported-b")).toThrow(
+      "Unsupported SANDBOX_PROVIDER: unsupported-b"
+    );
     expect(() => resolveSandboxBackendName("k8s")).toThrow("Unsupported SANDBOX_PROVIDER: k8s");
     expect(() => resolveSandboxBackendName("fly")).toThrow("Unsupported SANDBOX_PROVIDER: fly");
   });
@@ -48,7 +51,28 @@ describe("isModalSandboxBackend", () => {
     expect(isModalSandboxBackend(undefined)).toBe(true);
   });
 
-  it("returns false for daytona", () => {
-    expect(isModalSandboxBackend("daytona")).toBe(false);
+  it("throws for unsupported providers", () => {
+    expect(() => isModalSandboxBackend("unsupported-a")).toThrow(
+      "Unsupported SANDBOX_PROVIDER: unsupported-a"
+    );
+    expect(() => isModalSandboxBackend("unsupported-b")).toThrow(
+      "Unsupported SANDBOX_PROVIDER: unsupported-b"
+    );
+  });
+});
+
+describe("supportsRepoImageBackend", () => {
+  it("returns true for modal", () => {
+    expect(supportsRepoImageBackend("modal")).toBe(true);
+    expect(supportsRepoImageBackend(undefined)).toBe(true);
+  });
+
+  it("throws for unsupported providers", () => {
+    expect(() => supportsRepoImageBackend("unsupported-a")).toThrow(
+      "Unsupported SANDBOX_PROVIDER: unsupported-a"
+    );
+    expect(() => supportsRepoImageBackend("unsupported-b")).toThrow(
+      "Unsupported SANDBOX_PROVIDER: unsupported-b"
+    );
   });
 });

@@ -12,11 +12,8 @@ import { initSchema } from "./schema";
 import { buildSessionInternalUrl, SessionInternalPaths } from "./contracts";
 import { resolveAppName, timingSafeEqual } from "@open-inspect/shared";
 import { generateId, hashToken, encryptToken, decryptToken } from "../auth/crypto";
-import { getGitHubAppConfig, getCachedInstallationToken } from "../auth/github-app";
-import { createModalClient } from "../sandbox/client";
-import { createDaytonaRestClient } from "../sandbox/daytona-rest-client";
+import { buildModalSandboxDashboardUrl, createModalClient } from "../sandbox/client";
 import { createModalProvider } from "../sandbox/providers/modal-provider";
-import { createDaytonaProvider } from "../sandbox/providers/daytona-provider";
 import { resolveSandboxBackendName } from "../sandbox/provider-name";
 import { createLogger, parseLogLevel } from "../logger";
 import type { Logger } from "../logger";
@@ -38,8 +35,7 @@ import { IntegrationSettingsStore, resolveSlackSettings } from "../db/integratio
 import { SessionIndexStore } from "../db/session-index";
 import { DEFAULT_EXECUTION_TIMEOUT_MS } from "../sandbox/lifecycle/decisions";
 import {
-  createSourceControlProvider as createSourceControlProviderImpl,
-  resolveScmProviderFromEnv,
+  createSourceControlProviderFromEnv,
   type SourceControlProvider,
   type GitPushSpec,
 } from "../source-control";
@@ -56,13 +52,14 @@ import type {
 } from "../types";
 import type { SessionRow, ArtifactRow, SandboxRow } from "./types";
 import { SessionRepository } from "./repository";
-import { createKvCacheStore } from "@open-inspect/shared";
+import { parseTunnelUrls } from "./tunnel-urls";
 import { SessionWebSocketManagerImpl, type SessionWebSocketManager } from "./websocket-manager";
 import { SessionPullRequestService } from "./pull-request-service";
 import { RepoSecretsStore } from "../db/repo-secrets";
 import { GlobalSecretsStore } from "../db/global-secrets";
 import { mergeSecrets } from "../db/secrets-validation";
 import { OpenAITokenRefreshService } from "./openai-token-refresh-service";
+import { ScmCredentialsService } from "./scm-credentials-service";
 import { ParticipantService, getAvatarUrl } from "./participant-service";
 import { UserScmTokenStore } from "../db/user-scm-tokens";
 import { CallbackNotificationService } from "./callback-notification-service";
@@ -82,6 +79,11 @@ import {
   createSessionLifecycleHandler,
   type SessionLifecycleHandler,
 } from "./http/handlers/session-lifecycle.handler";
+import {
+  normalizeSessionTitle,
+  type SessionTitleUpdateOptions,
+  type SessionTitleUpdateResult,
+} from "./title";
 import {
   createPullRequestHandler,
   type PullRequestHandler,
@@ -171,8 +173,10 @@ export class SessionDO extends DurableObject<Env> {
     unarchive: (request) => this.sessionLifecycleHandler.unarchive(request),
     verifySandboxToken: (request) => this.sandboxHandler.verifySandboxToken(request),
     openaiTokenRefresh: () => this.sandboxHandler.openaiTokenRefresh(),
+    scmCredentials: () => this.sandboxHandler.scmCredentials(),
+    tunnelUrls: () => this.sandboxHandler.tunnelUrls(),
     spawnContext: () => this.childSessionsHandler.getSpawnContext(),
-    childSummary: () => this.childSessionsHandler.getChildSummary(),
+    childSummary: (_request, url) => this.childSessionsHandler.getChildSummary(url),
     cancel: () => this.sessionLifecycleHandler.cancel(),
     childSessionUpdate: (request) => this.childSessionsHandler.childSessionUpdate(request),
   });
@@ -299,7 +303,7 @@ export class SessionDO extends DurableObject<Env> {
         wsManager: this.wsManager,
         participantService: this.participantService,
         callbackService: this.callbackService,
-        scmProvider: resolveScmProviderFromEnv(this.env.SCM_PROVIDER),
+        scmProvider: "github",
         getClientInfo: (ws) => this.getClientInfo(ws),
         validateReasoningEffort: (model, effort) => this.validateReasoningEffort(model, effort),
         getSession: () => this.getSession(),
@@ -356,6 +360,7 @@ export class SessionDO extends DurableObject<Env> {
         getSession: () => this.getSession(),
         getSandbox: () => this.getSandbox(),
         getPublicSessionId: (session) => this.getPublicSessionId(session),
+        parseArtifactMetadata: (artifact) => this.parseArtifactMetadata(artifact),
         broadcast: (message) => this.broadcast(message),
       });
     }
@@ -382,6 +387,8 @@ export class SessionDO extends DurableObject<Env> {
         },
         isOpenAISecretsConfigured: () =>
           Boolean(this.env.DB && this.env.REPO_SECRETS_ENCRYPTION_KEY),
+        getScmCredentials: () =>
+          new ScmCredentialsService(this.sourceControlProvider, this.log).getCredentials(),
         broadcast: (message) => this.broadcast(message),
         generateId: () => generateId(),
         now: () => Date.now(),
@@ -427,12 +434,11 @@ export class SessionDO extends DurableObject<Env> {
         getPublicSessionId: (session) => this.getPublicSessionId(session),
         getParticipantByUserId: (userId) => this.participantService.getByUserId(userId),
         transitionSessionStatus: (status) => this.transitionSessionStatus(status),
-        syncSessionIndexTitle: (sessionId, title) => this.syncSessionIndexTitle(sessionId, title),
+        applySessionTitleUpdate: (title, options) => this.applySessionTitleUpdate(title, options),
         stopExecution: (options) => this.stopExecution(options),
         getSandboxSocket: () => this.wsManager.getSandboxSocket(),
         sendToSandbox: (ws, message) => this.wsManager.send(ws, message),
         updateSandboxStatus: (status) => this.updateSandboxStatus(status),
-        broadcast: (message) => this.broadcast(message),
       });
     }
 
@@ -515,6 +521,7 @@ export class SessionDO extends DurableObject<Env> {
         callbackService: this.callbackService,
         wsManager: this.wsManager,
         broadcast: (message) => this.broadcast(message),
+        applySessionTitleUpdate: (title, options) => this.applySessionTitleUpdate(title, options),
         getIsProcessing: () => this.getIsProcessing(),
         triggerSnapshot: (reason) => this.triggerSnapshot(reason),
         reconcileSessionStatusAfterExecution: async (success) => {
@@ -533,91 +540,25 @@ export class SessionDO extends DurableObject<Env> {
    * Create the source control provider.
    */
   private createSourceControlProvider(): SourceControlProvider {
-    const appConfig = getGitHubAppConfig(this.env);
-    const provider = resolveScmProviderFromEnv(this.env.SCM_PROVIDER);
-
-    return createSourceControlProviderImpl({
-      provider,
-      github: {
-        appConfig: appConfig ?? undefined,
-        cacheStore: createKvCacheStore(this.env.REPOS_CACHE),
-      },
-    });
+    return createSourceControlProviderFromEnv(this.env);
   }
 
   /**
    * Create the lifecycle manager with all required adapters.
    */
   private createLifecycleManager(): SandboxLifecycleManager {
-    const sandboxBackend = resolveSandboxBackendName(this.env.SANDBOX_PROVIDER);
+    resolveSandboxBackendName(this.env.SANDBOX_PROVIDER);
 
-    const provider =
-      sandboxBackend === "daytona"
-        ? (() => {
-            if (
-              !this.env.DAYTONA_API_URL ||
-              !this.env.DAYTONA_API_KEY ||
-              !this.env.DAYTONA_BASE_SNAPSHOT
-            ) {
-              throw new Error(
-                "DAYTONA_API_URL, DAYTONA_API_KEY, and DAYTONA_BASE_SNAPSHOT are required when SANDBOX_PROVIDER=daytona"
-              );
-            }
+    if (!this.env.MODAL_API_SECRET || !this.env.MODAL_WORKSPACE) {
+      throw new Error("MODAL_API_SECRET and MODAL_WORKSPACE are required");
+    }
 
-            const daytonaClient = createDaytonaRestClient({
-              apiUrl: this.env.DAYTONA_API_URL,
-              apiKey: this.env.DAYTONA_API_KEY,
-              target: this.env.DAYTONA_TARGET,
-              baseSnapshot: this.env.DAYTONA_BASE_SNAPSHOT,
-              autoStopIntervalMinutes: parseInt(
-                this.env.DAYTONA_AUTO_STOP_INTERVAL_MINUTES || "120",
-                10
-              ),
-              autoArchiveIntervalMinutes: parseInt(
-                this.env.DAYTONA_AUTO_ARCHIVE_INTERVAL_MINUTES || "10080",
-                10
-              ),
-            });
-
-            const scmProvider = resolveScmProviderFromEnv(this.env.SCM_PROVIDER);
-            const appConfig = getGitHubAppConfig(this.env);
-
-            const getCloneToken: () => Promise<string | null> =
-              scmProvider === "gitlab"
-                ? () => Promise.resolve(this.env.GITLAB_ACCESS_TOKEN ?? null)
-                : appConfig
-                  ? () =>
-                      getCachedInstallationToken(appConfig, {
-                        cacheStore: createKvCacheStore(this.env.REPOS_CACHE),
-                        userAgent: resolveAppName(this.env),
-                      })
-                  : () => Promise.resolve(null);
-
-            return createDaytonaProvider(
-              daytonaClient,
-              {
-                scmProvider,
-                gitlabAccessToken: this.env.GITLAB_ACCESS_TOKEN,
-                // Reuses API key as HMAC secret for code-server password derivation
-                // (distinct message prefix prevents collision with auth use)
-                codeServerPasswordSecret: this.env.DAYTONA_API_KEY,
-              },
-              getCloneToken
-            );
-          })()
-        : (() => {
-            if (!this.env.MODAL_API_SECRET || !this.env.MODAL_WORKSPACE) {
-              throw new Error(
-                "MODAL_API_SECRET and MODAL_WORKSPACE are required when SANDBOX_PROVIDER=modal"
-              );
-            }
-
-            const modalClient = createModalClient(
-              this.env.MODAL_API_SECRET,
-              this.env.MODAL_WORKSPACE
-            );
-            return createModalProvider(modalClient);
-          })();
+    const modalClient = createModalClient(
+      this.env.MODAL_API_SECRET,
+      this.env.MODAL_WORKSPACE,
+      this.env.MODAL_ENVIRONMENT_WEB_SUFFIX
+    );
+    const provider = createModalProvider(modalClient);
 
     // Storage adapter
     const storage: SandboxStorage = {
@@ -728,6 +669,9 @@ export class SessionDO extends DurableObject<Env> {
       };
     }
 
+    const sandboxDashboardUrlBuilder = (providerObjectId: string) =>
+      this.getSandboxDashboardUrl(providerObjectId);
+
     const config = {
       ...DEFAULT_LIFECYCLE_CONFIG,
       controlPlaneUrl,
@@ -739,15 +683,16 @@ export class SessionDO extends DurableObject<Env> {
       },
       mcpServerLookup,
       slackAgentNotifyLookup,
+      sandboxDashboardUrlBuilder,
     };
 
-    // Create repo image lookup if D1 is available (Modal-only — Daytona doesn't use repo images)
+    // Create repo image lookup if D1 is available.
     let repoImageLookup: RepoImageLookup | undefined;
-    if (this.env.DB && sandboxBackend === "modal") {
+    if (this.env.DB) {
       const repoImageStore = new RepoImageStore(this.env.DB);
       repoImageLookup = {
         getLatestReady: (repoOwner, repoName, baseBranch) =>
-          repoImageStore.getLatestReady(repoOwner, repoName, baseBranch),
+          repoImageStore.getLatestReady(repoOwner, repoName, "modal", baseBranch),
       };
     }
 
@@ -1210,7 +1155,7 @@ export class SessionDO extends DurableObject<Env> {
       participantId: participant.id,
       userId: participant.user_id,
       name: participant.scm_name || participant.scm_login || participant.user_id,
-      avatar: getAvatarUrl(participant.scm_login, resolveScmProviderFromEnv(this.env.SCM_PROVIDER)),
+      avatar: getAvatarUrl(participant.scm_login, "github"),
       status: "active",
       lastSeen: Date.now(),
       clientId: data.clientId,
@@ -1244,10 +1189,7 @@ export class SessionDO extends DurableObject<Env> {
       participant: {
         participantId: participant.id,
         name: participant.scm_name || participant.scm_login || participant.user_id,
-        avatar: getAvatarUrl(
-          participant.scm_login,
-          resolveScmProviderFromEnv(this.env.SCM_PROVIDER)
-        ),
+        avatar: getAvatarUrl(participant.scm_login, "github"),
       },
       replay,
       spawnError: sandbox?.last_spawn_error ?? null,
@@ -1309,7 +1251,7 @@ export class SessionDO extends DurableObject<Env> {
       participantId: mapping.participant_id,
       userId: mapping.user_id,
       name: mapping.scm_name || mapping.scm_login || mapping.user_id,
-      avatar: getAvatarUrl(mapping.scm_login, resolveScmProviderFromEnv(this.env.SCM_PROVIDER)),
+      avatar: getAvatarUrl(mapping.scm_login, "github"),
       status: "active",
       lastSeen: Date.now(),
       clientId: mapping.client_id || `client-${Date.now()}`,
@@ -1381,7 +1323,11 @@ export class SessionDO extends DurableObject<Env> {
 
     const rawLimit = typeof data.limit === "number" ? data.limit : 200;
     const limit = Math.max(1, Math.min(rawLimit, 500));
-    const page = this.repository.getEventsHistoryPage(data.cursor.timestamp, data.cursor.id, limit);
+    const page = this.repository.getEventTimelinePage({
+      cursor: { kind: "timeline", createdAt: data.cursor.timestamp, id: data.cursor.id },
+      excludeTypes: ["heartbeat"],
+      limit,
+    });
 
     const items: SandboxEvent[] = [];
     for (const event of page.events) {
@@ -1392,14 +1338,13 @@ export class SessionDO extends DurableObject<Env> {
       }
     }
 
-    // Compute new cursor from oldest item in the page
-    const oldestEvent = page.events.length > 0 ? page.events[0] : null;
-
     this.safeSend(ws, {
       type: "history_page",
       items,
       hasMore: page.hasMore,
-      cursor: oldestEvent ? { timestamp: oldestEvent.created_at, id: oldestEvent.id } : null,
+      cursor: page.nextCursor
+        ? { timestamp: page.nextCursor.createdAt, id: page.nextCursor.id }
+        : null,
     } as ServerMessage);
   }
 
@@ -1503,20 +1448,6 @@ export class SessionDO extends DurableObject<Env> {
     );
   }
 
-  private syncSessionIndexTitle(sessionId: string, title: string): void {
-    if (!this.env.DB) return;
-    const sessionStore = new SessionIndexStore(this.env.DB);
-    this.ctx.waitUntil(
-      sessionStore.updateTitle(sessionId, title).catch((error) => {
-        this.log.error("session_index.update_title.background_error", {
-          session_id: sessionId,
-          title,
-          error,
-        });
-      })
-    );
-  }
-
   private syncSessionMetrics(sessionId: string): void {
     if (!this.env.DB) return;
 
@@ -1543,6 +1474,21 @@ export class SessionDO extends DurableObject<Env> {
             error,
           });
         })
+    );
+  }
+
+  private syncSessionIndexTitle(sessionId: string, title: string, updatedAt: number): void {
+    if (!this.env.DB) return;
+    const sessionStore = new SessionIndexStore(this.env.DB);
+    this.ctx.waitUntil(
+      sessionStore.updateTitleIfNewer(sessionId, title, updatedAt).catch((error) => {
+        this.log.error("session_index.update_title.background_error", {
+          session_id: sessionId,
+          title,
+          updated_at: updatedAt,
+          error,
+        });
+      })
     );
   }
 
@@ -1575,6 +1521,45 @@ export class SessionDO extends DurableObject<Env> {
     return true;
   }
 
+  private applySessionTitleUpdate(
+    title: string,
+    options: SessionTitleUpdateOptions = {}
+  ): SessionTitleUpdateResult {
+    const normalized = normalizeSessionTitle(title);
+    if (!normalized.ok) {
+      return { ok: false, reason: "invalid", error: normalized.error };
+    }
+    const titleText = normalized.title;
+
+    const session = this.getSession();
+    if (!session) {
+      return { ok: false, reason: "not_found", error: "Session not found" };
+    }
+
+    const updatedAt = Math.max(Date.now(), session.updated_at + 1);
+    if (options.onlyIfUnset) {
+      const didUpdate = this.repository.updateSessionTitleIfUnset(session.id, titleText, updatedAt);
+      if (!didUpdate) {
+        return { ok: false, reason: "already_set", error: "Session title is already set" };
+      }
+    } else {
+      this.repository.updateSessionTitle(session.id, titleText, updatedAt);
+    }
+
+    const publicSessionId = this.getPublicSessionId(session);
+    this.syncSessionIndexTitle(publicSessionId, titleText, updatedAt);
+    this.broadcast({ type: "session_title", title: titleText });
+
+    if (session.parent_session_id) {
+      this.notifyParentOfChildUpdate({ ...session, title: titleText }, publicSessionId, {
+        status: session.status,
+        title: titleText,
+      });
+    }
+
+    return { ok: true, title: titleText };
+  }
+
   /**
    * Fire-and-forget notification to the parent session so its connected clients
    * can refresh the child-sessions list in real time.
@@ -1583,6 +1568,17 @@ export class SessionDO extends DurableObject<Env> {
     session: Pick<SessionRow, "parent_session_id" | "title">,
     childSessionId: string,
     status: SessionStatus
+  ): void {
+    this.notifyParentOfChildUpdate(session, childSessionId, {
+      status,
+      title: session.title,
+    });
+  }
+
+  private notifyParentOfChildUpdate(
+    session: Pick<SessionRow, "parent_session_id" | "title">,
+    childSessionId: string,
+    update: { status: SessionStatus; title: string | null }
   ): void {
     const parentId = session.parent_session_id;
     if (!parentId || !this.env.SESSION) return;
@@ -1598,8 +1594,8 @@ export class SessionDO extends DurableObject<Env> {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               childSessionId,
-              status,
-              title: session.title,
+              status: update.status,
+              title: update.title,
             }),
           })
         )
@@ -1607,7 +1603,7 @@ export class SessionDO extends DurableObject<Env> {
           this.log.error("notify_parent.failed", {
             parent_id: parentId,
             child_id: childSessionId,
-            status,
+            status: update.status,
             error,
           });
         })
@@ -1676,7 +1672,16 @@ export class SessionDO extends DurableObject<Env> {
       tunnelUrls: sandbox?.tunnel_urls ? this.safeParseTunnelUrls(sandbox.tunnel_urls) : null,
       ttydUrl: sandbox?.ttyd_url ?? null,
       ttydToken,
+      sandboxDashboardUrl: this.getSandboxDashboardUrl(sandbox?.modal_object_id),
     };
+  }
+
+  private getSandboxDashboardUrl(providerObjectId: string | null | undefined): string | null {
+    return buildModalSandboxDashboardUrl({
+      workspace: this.env.MODAL_WORKSPACE,
+      environment: this.env.MODAL_ENVIRONMENT,
+      providerObjectId,
+    });
   }
 
   /**
@@ -1687,12 +1692,11 @@ export class SessionDO extends DurableObject<Env> {
   }
 
   private safeParseTunnelUrls(raw: string): Record<string, string> | null {
-    try {
-      return JSON.parse(raw) as Record<string, string>;
-    } catch {
+    const urls = parseTunnelUrls(raw);
+    if (!urls) {
       this.log.warn("Invalid sandbox tunnel_urls JSON");
-      return null;
     }
+    return urls;
   }
 
   // Database helpers

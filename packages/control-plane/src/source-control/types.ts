@@ -27,7 +27,7 @@ export interface RepositoryInfo {
 /**
  * Supported source control provider names.
  */
-export type SourceControlProviderName = "github" | "bitbucket" | "gitlab";
+export type SourceControlProviderName = "github";
 
 /**
  * Authentication context for source control API operations.
@@ -51,6 +51,23 @@ export interface GitPushAuthContext {
   authType: "app" | "pat" | "token";
   /** Decrypted token for git operations */
   token: string;
+}
+
+/**
+ * Credentials returned to a sandbox's git credential helper.
+ *
+ * Used by the long-lived sandbox to obtain fresh per-request credentials over
+ * git's standard `credential get` protocol, so individual git operations
+ * (fetch / push / ls-remote) survive past the credential's TTL without
+ * requiring env-var or remote-URL rotation.
+ */
+export interface CredentialHelperAuth {
+  /** Username component for HTTPS Basic auth (provider-specific). */
+  username: string;
+  /** Password component, typically a short-lived provider token. */
+  password: string;
+  /** Absolute epoch milliseconds when the password stops being valid. */
+  expiresAtEpochMs: number;
 }
 
 /**
@@ -171,7 +188,7 @@ export interface CreatePullRequestResult {
  * Source control provider interface.
  *
  * Defines the contract for source control platform operations.
- * Implementations wrap provider-specific APIs (GitHub, GitLab, Bitbucket).
+ * Implementations wrap GitHub APIs.
  *
  * Error handling:
  * - Methods should throw SourceControlProviderError with appropriate errorType
@@ -282,6 +299,19 @@ export interface SourceControlProvider {
    * @throws SourceControlProviderError
    */
   generatePushAuth(): Promise<GitPushAuthContext>;
+
+  /**
+   * Generate credentials for the sandbox's git credential helper.
+   *
+   * Called per request from inside the sandbox via
+   * `POST /sessions/:id/scm-credentials`. The returned `username` is the
+   * provider-specific basic-auth username (e.g. `x-access-token` for GitHub),
+   * and `password` is a freshly minted token. `expiresAtEpochMs` lets the
+   * client side cache the credentials until shortly before they expire.
+   *
+   * @throws SourceControlProviderError on configuration or upstream errors
+   */
+  generateCredentialHelperAuth(): Promise<CredentialHelperAuth>;
 
   /**
    * Build provider-specific URL for manual pull request creation.

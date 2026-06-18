@@ -21,12 +21,12 @@ For day-to-day usage, see the user-facing
 3. The worker emits a `Thought` activity (visible in Linear as "thinking")
 4. Resolves the target GitHub repo (see [Repo Resolution](#repo-resolution) below)
 5. Creates an Open-Inspect coding session and sends the issue as a prompt
-6. Emits a `Response` activity with a link to the live session
+6. Emits a `Thought` activity with a link to the live session
 7. When the agent completes, emits a final `Response` with the PR link
 
 Follow-up messages on an issue with an active session are sent as additional prompts to the existing
-session rather than creating a new one. Stopping or cancelling the agent in Linear kills the sandbox
-session.
+session rather than creating a new one. The worker emits a `Thought` activity while it forwards the
+follow-up. Stopping or cancelling the agent in Linear kills the sandbox session.
 
 ## Setup
 
@@ -129,7 +129,9 @@ On any Linear issue:
 - Assign the issue to `OpenInspect` → agent picks it up
 - Agent status is visible directly in Linear (thinking, working, done)
 - Add a `model:<name>` label to override the model (e.g., `model:opus`, `model:sonnet`,
-  `model:haiku`, `model:gpt-5.4`, `model:gpt-5.2-codex`)
+  `model:haiku`, `model:opus-4-8`, `model:fable`, `model:fable-5`, `model:gpt-5.4`,
+  `model:gpt-5.2-codex`). See [Available Models](../../docs/AVAILABLE_MODELS.md) for canonical model
+  IDs.
 
 ## Repo Resolution
 
@@ -163,13 +165,13 @@ All `/config/*` endpoints require HMAC auth via `Authorization: Bearer <token>`.
 
 The agent uses Linear's native activity system:
 
-| Activity        | When                              | User sees                                       |
-| --------------- | --------------------------------- | ----------------------------------------------- |
-| **Thought**     | Analyzing issue, resolving repo   | Thinking indicator in Linear                    |
-| **Response**    | Session created, PR opened        | Comment-like message on the issue               |
-| **Error**       | Something went wrong              | Error message on the issue                      |
-| **Action**      | Tool calls (file edits, commands) | Ephemeral status (e.g., "Editing `src/foo.ts`") |
-| **Elicitation** | Repo classification is uncertain  | Question asking user to clarify                 |
+| Activity        | When                                   | User sees                                       |
+| --------------- | -------------------------------------- | ----------------------------------------------- |
+| **Thought**     | Analyzing, session started, follow-ups | Thinking indicator in Linear                    |
+| **Response**    | Final completion output, PR opened     | Comment-like message on the issue               |
+| **Error**       | Something went wrong                   | Error message on the issue                      |
+| **Action**      | Tool calls (file edits, commands)      | Ephemeral status (e.g., "Editing `src/foo.ts`") |
+| **Elicitation** | Repo classification is uncertain       | Question asking user to clarify                 |
 
 ## Development
 

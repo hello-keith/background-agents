@@ -6,8 +6,6 @@
 # Uses sha256sum (Linux) or shasum (macOS) for cross-platform compatibility
 # Includes .py, .js, and .ts files (sandbox plugins and tools)
 data "external" "modal_source_hash" {
-  count = local.use_modal_backend ? 1 : 0
-
   program = ["bash", "-c", <<-EOF
     cd ${var.project_root}
     if command -v sha256sum &> /dev/null; then
@@ -21,17 +19,18 @@ data "external" "modal_source_hash" {
 }
 
 module "modal_app" {
-  count  = local.use_modal_backend ? 1 : 0
   source = "../../modules/modal-app"
 
   modal_token_id     = var.modal_token_id
   modal_token_secret = var.modal_token_secret
 
-  app_name      = "open-inspect"
-  workspace     = var.modal_workspace
-  deploy_path   = "${var.project_root}/packages/modal-infra"
-  deploy_module = "deploy"
-  source_hash   = data.external.modal_source_hash[0].result.hash
+  app_name                     = "open-inspect"
+  workspace                    = var.modal_workspace
+  modal_environment            = var.modal_environment
+  modal_environment_web_suffix = var.modal_environment_web_suffix
+  deploy_path                  = "${var.project_root}/packages/modal-infra"
+  deploy_module                = "deploy"
+  source_hash                  = data.external.modal_source_hash.result.hash
 
   secrets = [
     {

@@ -4,7 +4,7 @@ Next.js web application for interacting with Open-Inspect coding sessions.
 
 ## Features
 
-- GitHub OAuth authentication
+- GitHub App OAuth authentication with optional Google OAuth
 - Session dashboard with list view
 - Real-time streaming via WebSocket
 - Message timeline with tool calls
@@ -25,7 +25,7 @@ Next.js web application for interacting with Open-Inspect coding sessions.
 │  └──────────────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │                      API Routes                           │   │
-│  │  /api/auth/[...nextauth] - GitHub OAuth                  │   │
+│  │  /api/auth/[...nextauth] - GitHub and Google OAuth       │   │
 │  │  /api/sessions           - Session CRUD                  │   │
 │  │  /api/repos              - Repository list               │   │
 │  │  /api/repos/:owner/:name/secrets - Secrets CRUD          │   │
@@ -46,6 +46,7 @@ Next.js web application for interacting with Open-Inspect coding sessions.
 
 - Node.js 22+
 - GitHub App configured for OAuth (see below)
+- Google OAuth Web client, if enabling Google login
 
 ### GitHub App Setup
 
@@ -68,6 +69,24 @@ Required permissions for the GitHub App:
 - **Account permissions**: Email addresses (read-only)
 - **Repository permissions**: Contents (read & write) - for repo operations
 
+### Google OAuth Setup
+
+Google login is optional. Create a Google OAuth Web client and add the callback URL for the running
+web app:
+
+```text
+https://your-domain.com/api/auth/callback/google
+```
+
+For local development, use:
+
+```text
+http://localhost:3000/api/auth/callback/google
+```
+
+Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `NEXT_PUBLIC_GOOGLE_ENABLED=true` together.
+Google sign-in is admitted by verified email allowlists, not GitHub username allowlists.
+
 ### Environment Variables
 
 Create `.env.local`:
@@ -77,6 +96,16 @@ Create `.env.local`:
 GITHUB_CLIENT_ID=your_github_app_client_id
 GITHUB_CLIENT_SECRET=your_github_app_client_secret
 
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+NEXT_PUBLIC_GOOGLE_ENABLED=
+
+# Branding (optional)
+NEXT_PUBLIC_APP_NAME=Open-Inspect       # Defaults to Open-Inspect
+NEXT_PUBLIC_APP_SHORT_NAME=Inspect      # Sidebar label; defaults to Inspect
+NEXT_PUBLIC_APP_ICON_URL=               # Logo/favicon URL; blank uses the built-in icon
+
 # NextAuth
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your_random_secret  # Generate: openssl rand -base64 32
@@ -84,17 +113,23 @@ NEXTAUTH_SECRET=your_random_secret  # Generate: openssl rand -base64 32
 # Access Control
 ALLOWED_USERS=username1,username2          # Comma-separated GitHub usernames
 ALLOWED_EMAIL_DOMAINS=example.com,corp.io  # Comma-separated email domains
-UNSAFE_ALLOW_ALL_USERS=false               # Set true to explicitly allow all users when both lists are empty
+ALLOWED_EMAILS=user@example.com            # Comma-separated exact email addresses
+UNSAFE_ALLOW_ALL_USERS=false               # Set true to explicitly allow all users when all allowlists are empty
 
 # Control Plane
 CONTROL_PLANE_URL=http://localhost:8787
 NEXT_PUBLIC_WS_URL=ws://localhost:8787
 ```
 
-> **Access Control**: If both `ALLOWED_USERS` and `ALLOWED_EMAIL_DOMAINS` are empty, sign-in is
-> denied unless `UNSAFE_ALLOW_ALL_USERS=true`. For Terraform-managed production deploys, Terraform
-> also fails validation unless you set at least one allowlist or explicitly opt in with
-> `unsafe_allow_all_users = true`.
+> **Access Control**: If `ALLOWED_USERS`, `ALLOWED_EMAIL_DOMAINS`, and `ALLOWED_EMAILS` are empty,
+> sign-in is denied unless `UNSAFE_ALLOW_ALL_USERS=true`. `ALLOWED_USERS` matches GitHub usernames;
+> email allowlists match verified emails from any auth provider. For Terraform-managed production
+> deploys, Terraform also fails validation unless you set at least one allowlist or explicitly opt
+> in with `unsafe_allow_all_users = true`.
+
+> **Branding**: `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_SHORT_NAME`, and `NEXT_PUBLIC_APP_ICON_URL`
+> are read at build time. Restart `npm run dev` after changing them locally. Terraform-managed
+> production deploys set them from `app_name`, `app_short_name`, and `app_icon_url`.
 
 ### Development
 
@@ -140,7 +175,7 @@ npm run build
 - Streaming content display
 - Participant presence list
 - Stop button during execution
-- Artifacts sidebar (PRs, screenshots)
+- Artifacts sidebar (PRs, screenshots, videos)
 
 ## WebSocket Protocol
 

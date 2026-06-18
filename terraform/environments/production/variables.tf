@@ -24,19 +24,6 @@ variable "cloudflare_worker_subdomain" {
   type        = string
 }
 
-variable "vercel_api_token" {
-  description = "Vercel API token (required only when web_platform = 'vercel'). Do NOT set to empty string — the Vercel provider validates this on init even when no Vercel resources are created. Leave unset to use the built-in dummy token for Cloudflare-only deployments."
-  type        = string
-  sensitive   = true
-  default     = "000000000000000000000000"
-}
-
-variable "vercel_team_id" {
-  description = "Vercel team ID (required only when web_platform = 'vercel'). Leave unset when using Cloudflare."
-  type        = string
-  default     = "unused"
-}
-
 variable "modal_token_id" {
   description = "Modal API token ID"
   type        = string
@@ -44,8 +31,8 @@ variable "modal_token_id" {
   default     = ""
 
   validation {
-    condition     = var.sandbox_provider != "modal" || length(var.modal_token_id) > 0
-    error_message = "modal_token_id must be set when sandbox_provider = 'modal'."
+    condition     = length(var.modal_token_id) > 0
+    error_message = "modal_token_id must be set."
   }
 }
 
@@ -56,19 +43,41 @@ variable "modal_token_secret" {
   default     = ""
 
   validation {
-    condition     = var.sandbox_provider != "modal" || length(var.modal_token_secret) > 0
-    error_message = "modal_token_secret must be set when sandbox_provider = 'modal'."
+    condition     = length(var.modal_token_secret) > 0
+    error_message = "modal_token_secret must be set."
   }
 }
 
 variable "modal_workspace" {
-  description = "Modal workspace name (used in endpoint URLs)"
+  description = "Modal workspace name"
   type        = string
   default     = ""
 
   validation {
-    condition     = var.sandbox_provider != "modal" || length(var.modal_workspace) > 0
-    error_message = "modal_workspace must be set when sandbox_provider = 'modal'."
+    condition     = length(var.modal_workspace) > 0
+    error_message = "modal_workspace must be set."
+  }
+}
+
+variable "modal_environment" {
+  description = "Modal environment name used by the Modal CLI"
+  type        = string
+  default     = "main"
+
+  validation {
+    condition     = length(trimspace(var.modal_environment)) > 0 && can(regex("^[^:/\\\\]+$", var.modal_environment))
+    error_message = "modal_environment must be set and must not contain colons, slashes, or backslashes."
+  }
+}
+
+variable "modal_environment_web_suffix" {
+  description = "Modal environment web suffix used in endpoint URLs. Use lowercase letters, digits, and dashes, or leave empty for the environment with no web suffix."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = can(regex("^$|^[a-z0-9-]+$", var.modal_environment_web_suffix))
+    error_message = "modal_environment_web_suffix must be empty or contain only lowercase letters, digits, and dashes."
   }
 }
 
@@ -85,6 +94,33 @@ variable "github_client_secret" {
   description = "GitHub OAuth App client secret"
   type        = string
   sensitive   = true
+}
+
+# =============================================================================
+# Google OAuth Credentials (Optional — enables "Sign in with Google")
+# =============================================================================
+# Set both google_client_id and google_client_secret to enable Google login for
+# non-developer users (PMs, support agents). Leave both empty for GitHub-only
+# deployments, which stay byte-unchanged. A Google session authenticates the user
+# but carries no SCM credentials; git operations continue to use the shared
+# GitHub App installation, and PRs fall back to the App bot.
+
+variable "google_client_id" {
+  description = "Google OAuth 2.0 client ID. Set together with google_client_secret to enable Google login; leave both empty to keep the deployment GitHub-only."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = (var.google_client_id == "") == (var.google_client_secret == "")
+    error_message = "google_client_id and google_client_secret must be set together (both non-empty) or both left empty. Setting only one silently disables Google login."
+  }
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth 2.0 client secret. Required together with google_client_id."
+  type        = string
+  sensitive   = true
+  default     = ""
 }
 
 # =============================================================================
@@ -249,49 +285,9 @@ variable "modal_api_secret" {
   default     = ""
 
   validation {
-    condition     = var.sandbox_provider != "modal" || length(var.modal_api_secret) > 0
-    error_message = "modal_api_secret must be set when sandbox_provider = 'modal'."
+    condition     = length(var.modal_api_secret) > 0
+    error_message = "modal_api_secret must be set."
   }
-}
-
-variable "daytona_api_url" {
-  description = "Base URL for the Daytona REST API (e.g. https://app.daytona.io/api)"
-  type        = string
-  default     = ""
-
-  validation {
-    condition     = var.sandbox_provider != "daytona" || length(var.daytona_api_url) > 0
-    error_message = "daytona_api_url must be set when sandbox_provider = 'daytona'."
-  }
-}
-
-variable "daytona_api_key" {
-  description = "API key for Daytona REST API (Bearer auth)"
-  type        = string
-  sensitive   = true
-  default     = ""
-
-  validation {
-    condition     = var.sandbox_provider != "daytona" || length(var.daytona_api_key) > 0
-    error_message = "daytona_api_key must be set when sandbox_provider = 'daytona'."
-  }
-}
-
-variable "daytona_base_snapshot" {
-  description = "Named Daytona snapshot used for fresh sandbox creation"
-  type        = string
-  default     = ""
-
-  validation {
-    condition     = var.sandbox_provider != "daytona" || length(var.daytona_base_snapshot) > 0
-    error_message = "daytona_base_snapshot must be set when sandbox_provider = 'daytona'."
-  }
-}
-
-variable "daytona_target" {
-  description = "Optional Daytona target name"
-  type        = string
-  default     = ""
 }
 
 variable "nextauth_secret" {
@@ -304,30 +300,8 @@ variable "nextauth_secret" {
 # Configuration
 # =============================================================================
 
-variable "sandbox_provider" {
-  description = "Sandbox backend for session execution: 'modal' or 'daytona'"
-  type        = string
-  default     = "modal"
-
-  validation {
-    condition     = contains(["modal", "daytona"], var.sandbox_provider)
-    error_message = "sandbox_provider must be 'modal' or 'daytona'."
-  }
-}
-
-variable "web_platform" {
-  description = "Platform for the web app deployment: 'vercel' or 'cloudflare' (OpenNext)"
-  type        = string
-  default     = "vercel"
-
-  validation {
-    condition     = contains(["vercel", "cloudflare"], var.web_platform)
-    error_message = "web_platform must be 'vercel' or 'cloudflare'."
-  }
-}
-
 variable "deployment_name" {
-  description = "Unique deployment name used in URLs and resource names. Use something unique like your GitHub username or company name (e.g., 'acme', 'johndoe'). This will create URLs like: open-inspect-{deployment_name}.vercel.app"
+  description = "Unique deployment name used in URLs and resource names. Use something unique like your GitHub username or company name."
   type        = string
 }
 
@@ -344,7 +318,7 @@ variable "app_short_name" {
 }
 
 variable "app_icon_url" {
-  description = "Optional URL (absolute or root-relative) to a custom logo image for the command menu and browser favicon. Leave empty to use the built-in icon."
+  description = "Optional URL (absolute or root-relative) to a custom logo image for the command menu and browser favicon. Leave empty to use the built-in favicon and default in-app icon."
   type        = string
   default     = ""
 }
@@ -404,21 +378,30 @@ variable "r2_media_bucket_name" {
 # =============================================================================
 # Access Control
 # =============================================================================
+# Three provider-agnostic allowlists gate sign-in; a user is admitted if they
+# match ANY configured allowlist. Leave all three empty only with
+# unsafe_allow_all_users = true.
 
 variable "allowed_users" {
-  description = "Comma-separated list of GitHub usernames allowed to sign in. Leave empty only when allowed_email_domains is set or unsafe_allow_all_users is true."
+  description = "Comma-separated list of GitHub usernames allowed to sign in. Leave empty only when another allowlist (allowed_email_domains, allowed_emails) is set or unsafe_allow_all_users is true."
   type        = string
   default     = ""
 }
 
 variable "allowed_email_domains" {
-  description = "Comma-separated list of email domains allowed to sign in (e.g., 'example.com,corp.io'). Leave empty only when allowed_users is set or unsafe_allow_all_users is true."
+  description = "Comma-separated list of email domains allowed to sign in (e.g., 'example.com,corp.io'). Matches any provider's verified email. Leave empty only when another allowlist (allowed_users, allowed_emails) is set or unsafe_allow_all_users is true."
+  type        = string
+  default     = ""
+}
+
+variable "allowed_emails" {
+  description = "Comma-separated list of exact email addresses allowed to sign in, matched case-insensitively against any provider's verified email. Use this for individual users on shared domains (e.g. one person@gmail.com) where allowed_email_domains would be too broad. Leave empty only when another allowlist is set or unsafe_allow_all_users is true."
   type        = string
   default     = ""
 }
 
 variable "unsafe_allow_all_users" {
-  description = "Bypass Terraform's access-control safety check and allow any authenticated GitHub user to sign in when both allowlists are empty. Set to true only for intentionally open deployments."
+  description = "Bypass Terraform's access-control safety check and allow any authenticated user to sign in when all allowlists are empty. Set to true only for intentionally open deployments."
   type        = bool
   default     = false
 }

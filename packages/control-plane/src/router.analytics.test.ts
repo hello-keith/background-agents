@@ -12,7 +12,9 @@ vi.mock("./db/analytics-store", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
-    AnalyticsStore: vi.fn().mockImplementation(() => mockStore),
+    AnalyticsStore: vi.fn().mockImplementation(function () {
+      return mockStore;
+    }),
   };
 });
 
@@ -21,7 +23,7 @@ describe("analytics router integration", () => {
     vi.clearAllMocks();
   });
 
-  it("serves analytics routes even when the SCM provider is not github", async () => {
+  it("serves analytics routes", async () => {
     mockStore.getSummary.mockResolvedValue({
       totalSessions: 1,
       activeUsers: 1,
@@ -40,7 +42,6 @@ describe("analytics router integration", () => {
 
     const env = {
       INTERNAL_CALLBACK_SECRET: "test-secret",
-      SCM_PROVIDER: "gitlab",
       DB: {
         prepare: vi.fn(),
         batch: vi.fn(),

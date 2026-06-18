@@ -42,12 +42,39 @@ export interface CodeServerSettings {
 /** Maximum number of tunnel ports a user can configure per sandbox. */
 export const MAX_TUNNEL_PORTS = 10;
 
-/** Sandbox environment settings. Provider-agnostic: describes what the user wants, not how it's done. */
+/** Default maximum active agent-spawned child sessions per parent session. */
+export const DEFAULT_MAX_CONCURRENT_CHILD_SESSIONS = 5;
+
+/** Default maximum agent-spawned child sessions per parent session. */
+export const DEFAULT_MAX_TOTAL_CHILD_SESSIONS = 15;
+
+/**
+ * Sandbox environment settings. Describes what the user wants, while Modal
+ * enforces the real limits. Resource fields (`cpuCores`, `memoryMib`) are
+ * advisory. We only check they're positive. At repo scope, `null` explicitly
+ * uses the Modal default instead of inheriting a global resource default.
+ */
 export interface SandboxSettings {
   /** Extra ports to expose via tunnels (e.g., dev server ports 3000, 5173). */
   tunnelPorts?: number[];
   /** Enable a browser-based terminal (ttyd) in sandbox sessions. */
   terminalEnabled?: boolean;
+  /** Maximum active agent-spawned child sessions per parent session. */
+  maxConcurrentChildSessions?: number;
+  /** Maximum total agent-spawned child sessions per parent session. */
+  maxTotalChildSessions?: number;
+  /**
+   * CPU cores to reserve for the sandbox. Fractional values are allowed, but
+   * providers may round to their supported resource shapes. Unset →
+   * inherit/default; null → provider default.
+   */
+  cpuCores?: number | null;
+  /**
+   * Memory to reserve for the sandbox, in MiB. Providers may map this to their
+   * closest supported resource shape. Unset → inherit/default; null → provider
+   * default.
+   */
+  memoryMib?: number | null;
 }
 
 export type SlackMentionsPolicy = "allow" | "escape" | "strip";
@@ -127,7 +154,7 @@ export const INTEGRATION_DEFINITIONS: {
   {
     id: "sandbox",
     name: "Sandbox",
-    description: "Sandbox environment settings (tunnel ports, timeouts, etc.)",
+    description: "Sandbox settings for tunnels, terminal access, child sessions, CPU, and memory",
   },
   {
     id: "slack",

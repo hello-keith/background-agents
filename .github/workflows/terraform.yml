@@ -11,10 +11,9 @@ on:
       - "packages/github-bot/**"
       - "packages/linear-bot/**"
       - "packages/modal-infra/**"
-      - "packages/daytona-infra/**"
       - "packages/sandbox-runtime/**"
       - "packages/shared/**"
-      - "packages/web/**" # Web app deployed via Terraform when web_platform = "cloudflare"
+      - "packages/web/**"
       - ".github/workflows/terraform.yml"
   pull_request:
     branches: [main]
@@ -26,7 +25,6 @@ on:
       - "packages/github-bot/**"
       - "packages/linear-bot/**"
       - "packages/modal-infra/**"
-      - "packages/daytona-infra/**"
       - "packages/sandbox-runtime/**"
       - "packages/shared/**"
       - "packages/web/**"
@@ -183,13 +181,15 @@ jobs:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TF_VAR_cloudflare_worker_subdomain: ${{ secrets.CLOUDFLARE_WORKER_SUBDOMAIN }}
-          TF_VAR_vercel_api_token: "${{ secrets.VERCEL_API_TOKEN || 'unused' }}"
-          TF_VAR_vercel_team_id: "${{ secrets.VERCEL_TEAM_ID || 'unused' }}"
           TF_VAR_modal_token_id: ${{ secrets.MODAL_TOKEN_ID }}
           TF_VAR_modal_token_secret: ${{ secrets.MODAL_TOKEN_SECRET }}
           TF_VAR_modal_workspace: ${{ secrets.MODAL_WORKSPACE }}
+          TF_VAR_modal_environment: "${{ secrets.MODAL_ENVIRONMENT || 'main' }}"
+          TF_VAR_modal_environment_web_suffix: ${{ secrets.MODAL_ENVIRONMENT_WEB_SUFFIX }}
           TF_VAR_github_client_id: ${{ secrets.GH_OAUTH_CLIENT_ID }}
           TF_VAR_github_client_secret: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           TF_VAR_github_app_id: ${{ secrets.GH_APP_ID }}
           TF_VAR_github_app_private_key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           TF_VAR_github_app_installation_id: ${{ secrets.GH_APP_INSTALLATION_ID }}
@@ -204,6 +204,7 @@ jobs:
           TF_VAR_modal_api_secret: ${{ secrets.MODAL_API_SECRET }}
           TF_VAR_allowed_users: ${{ secrets.ALLOWED_USERS }}
           TF_VAR_allowed_email_domains: ${{ secrets.ALLOWED_EMAIL_DOMAINS }}
+          TF_VAR_allowed_emails: ${{ secrets.ALLOWED_EMAILS }}
           TF_VAR_deployment_name: ${{ secrets.DEPLOYMENT_NAME }}
           TF_VAR_enable_github_bot: "${{ secrets.ENABLE_GITHUB_BOT || 'false' }}"
           TF_VAR_github_webhook_secret: ${{ secrets.GH_WEBHOOK_SECRET }}
@@ -215,13 +216,7 @@ jobs:
           TF_VAR_linear_client_id: ${{ secrets.LINEAR_CLIENT_ID }}
           TF_VAR_linear_client_secret: ${{ secrets.LINEAR_CLIENT_SECRET }}
           TF_VAR_linear_webhook_secret: ${{ secrets.LINEAR_WEBHOOK_SECRET }}
-          TF_VAR_web_platform: "${{ secrets.WEB_PLATFORM || 'vercel' }}"
           TF_VAR_enable_durable_object_bindings: "${{ secrets.ENABLE_DURABLE_OBJECT_BINDINGS || 'true' }}"
-          TF_VAR_sandbox_provider: "${{ secrets.SANDBOX_PROVIDER || 'modal' }}"
-          TF_VAR_daytona_api_url: ${{ secrets.DAYTONA_API_URL }}
-          TF_VAR_daytona_api_key: ${{ secrets.DAYTONA_API_KEY }}
-          TF_VAR_daytona_base_snapshot: ${{ secrets.DAYTONA_BASE_SNAPSHOT }}
-          TF_VAR_daytona_target: ${{ secrets.DAYTONA_TARGET }}
 
       - name: Post Plan Results
         uses: actions/github-script@v8
@@ -262,7 +257,7 @@ jobs:
   apply:
     name: Apply
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     needs: [validate, check-secrets]
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has-secrets == 'true'
     environment: production
@@ -288,7 +283,7 @@ jobs:
           npm run build -w @open-inspect/linear-bot
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8.2.0
 
       - name: Install Modal and Python dependencies
         run: uv sync --frozen
@@ -314,13 +309,15 @@ jobs:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TF_VAR_cloudflare_worker_subdomain: ${{ secrets.CLOUDFLARE_WORKER_SUBDOMAIN }}
-          TF_VAR_vercel_api_token: "${{ secrets.VERCEL_API_TOKEN || 'unused' }}"
-          TF_VAR_vercel_team_id: "${{ secrets.VERCEL_TEAM_ID || 'unused' }}"
           TF_VAR_modal_token_id: ${{ secrets.MODAL_TOKEN_ID }}
           TF_VAR_modal_token_secret: ${{ secrets.MODAL_TOKEN_SECRET }}
           TF_VAR_modal_workspace: ${{ secrets.MODAL_WORKSPACE }}
+          TF_VAR_modal_environment: "${{ secrets.MODAL_ENVIRONMENT || 'main' }}"
+          TF_VAR_modal_environment_web_suffix: ${{ secrets.MODAL_ENVIRONMENT_WEB_SUFFIX }}
           TF_VAR_github_client_id: ${{ secrets.GH_OAUTH_CLIENT_ID }}
           TF_VAR_github_client_secret: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           TF_VAR_github_app_id: ${{ secrets.GH_APP_ID }}
           TF_VAR_github_app_private_key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           TF_VAR_github_app_installation_id: ${{ secrets.GH_APP_INSTALLATION_ID }}
@@ -335,6 +332,7 @@ jobs:
           TF_VAR_modal_api_secret: ${{ secrets.MODAL_API_SECRET }}
           TF_VAR_allowed_users: ${{ secrets.ALLOWED_USERS }}
           TF_VAR_allowed_email_domains: ${{ secrets.ALLOWED_EMAIL_DOMAINS }}
+          TF_VAR_allowed_emails: ${{ secrets.ALLOWED_EMAILS }}
           TF_VAR_deployment_name: ${{ secrets.DEPLOYMENT_NAME }}
           TF_VAR_enable_github_bot: "${{ secrets.ENABLE_GITHUB_BOT || 'false' }}"
           TF_VAR_github_webhook_secret: ${{ secrets.GH_WEBHOOK_SECRET }}
@@ -346,13 +344,7 @@ jobs:
           TF_VAR_linear_client_id: ${{ secrets.LINEAR_CLIENT_ID }}
           TF_VAR_linear_client_secret: ${{ secrets.LINEAR_CLIENT_SECRET }}
           TF_VAR_linear_webhook_secret: ${{ secrets.LINEAR_WEBHOOK_SECRET }}
-          TF_VAR_web_platform: "${{ secrets.WEB_PLATFORM || 'vercel' }}"
           TF_VAR_enable_durable_object_bindings: "${{ secrets.ENABLE_DURABLE_OBJECT_BINDINGS || 'true' }}"
-          TF_VAR_sandbox_provider: "${{ secrets.SANDBOX_PROVIDER || 'modal' }}"
-          TF_VAR_daytona_api_url: ${{ secrets.DAYTONA_API_URL }}
-          TF_VAR_daytona_api_key: ${{ secrets.DAYTONA_API_KEY }}
-          TF_VAR_daytona_base_snapshot: ${{ secrets.DAYTONA_BASE_SNAPSHOT }}
-          TF_VAR_daytona_target: ${{ secrets.DAYTONA_TARGET }}
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
 

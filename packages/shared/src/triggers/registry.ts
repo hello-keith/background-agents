@@ -8,14 +8,14 @@ import { sentrySource, sentryConditions } from "./sentry";
 import { webhookSource, webhookConditions } from "./webhook";
 import { githubSource } from "./github";
 
-// GitHub and Linear condition handlers (stubs for Phase 2c).
+// Shared GitHub and Linear condition handlers.
 // These need to exist so that the ConditionRegistry is complete.
 import { matchGlob } from "./glob";
 import type { AutomationEvent } from "./types";
 
 /**
  * GitHub + Linear condition handlers defined here (cross-source).
- * Will move to source modules when those ship in Phase 2c.
+ * GitHub event automations are active; Linear conditions stay here until a Linear source is registered.
  */
 const sharedConditions = {
   branch: {
@@ -28,6 +28,18 @@ const sharedConditions = {
       if (!event.branch) return false;
       if (c.operator === "exact") return c.value.includes(event.branch);
       return c.value.some((pattern: string) => matchGlob(pattern, event.branch!));
+    },
+  },
+  target_branch: {
+    appliesTo: ["github"] as const,
+    validate(c: { value: string[] }) {
+      return c.value.length === 0 ? "At least one target branch pattern required" : null;
+    },
+    evaluate(c: { operator: string; value: string[] }, event: AutomationEvent) {
+      if (event.source !== "github") return true;
+      if (!event.targetBranch) return false;
+      if (c.operator === "exact") return c.value.includes(event.targetBranch);
+      return c.value.some((pattern: string) => matchGlob(pattern, event.targetBranch!));
     },
   },
   label: {
@@ -96,7 +108,7 @@ const sharedConditions = {
 } satisfies Partial<ConditionRegistry>;
 
 /**
- * Assembled condition registry — every key in ConditionConfigMap has a handler.
+ * Assembled condition registry. Every key in ConditionConfigMap has a handler.
  */
 export const conditionRegistry: ConditionRegistry = {
   ...sharedConditions,
@@ -106,7 +118,8 @@ export const conditionRegistry: ConditionRegistry = {
 
 /**
  * All registered trigger sources. The UI reads this for the trigger type selector.
- * Only Sentry and Webhook are active in Phase 2a/2b.
+ * Sentry, Webhook, and GitHub sources are active; Schedule is handled separately and Linear is not
+ * registered yet.
  */
 export const triggerSources: TriggerSourceDefinition[] = [
   sentrySource,

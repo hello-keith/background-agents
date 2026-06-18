@@ -34,13 +34,14 @@ If you override a global key at the repo level, the global entry shows "(overrid
 Use global secrets for keys that every session needs regardless of which repository it runs against.
 The most common example:
 
-| Key                 | Description                                                                                                                             |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY` | Required for Claude models when using the **Daytona** sandbox provider (Modal injects this automatically via its own secrets mechanism) |
+| Key                 | Description                                                                |
+| ------------------- | -------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY` | Usually provided through the Modal secrets configuration for Claude models |
+| `DEEPSEEK_API_KEY`  | Required for DeepSeek models; can be global or overridden per repository   |
 
-> **Daytona users**: If you plan to use Claude models, you must add `ANTHROPIC_API_KEY` as a global
-> secret after deploying. Without it, Claude sessions will fail with "Model not found." See
-> [Getting Started — Daytona](GETTING_STARTED.md#daytona) for details.
+> **Claude models**: configure `ANTHROPIC_API_KEY` in the Modal secret used by the sandbox
+> infrastructure. Without it, Claude sessions will fail with "Model not found." See
+> [Getting Started](GETTING_STARTED.md) for deployment details.
 
 ### When to use repository secrets
 
@@ -110,24 +111,26 @@ If you try to save a reserved key, the UI will show a validation error.
 
 ## Common Examples
 
-| Key                          | Scope  | Purpose                                               |
-| ---------------------------- | ------ | ----------------------------------------------------- |
-| `ANTHROPIC_API_KEY`          | Global | Claude API access (required for Daytona provider)     |
-| `OPENAI_OAUTH_REFRESH_TOKEN` | Repo   | OpenAI Codex access ([setup guide](OPENAI_MODELS.md)) |
-| `OPENAI_OAUTH_ACCOUNT_ID`    | Repo   | OpenAI Codex access ([setup guide](OPENAI_MODELS.md)) |
-| `DATABASE_URL`               | Repo   | Database connection string                            |
-| `AWS_ACCESS_KEY_ID`          | Repo   | AWS credentials for a specific project                |
-| `STRIPE_SECRET_KEY`          | Repo   | Stripe API key for a specific project                 |
+| Key                          | Scope          | Purpose                                               |
+| ---------------------------- | -------------- | ----------------------------------------------------- |
+| `ANTHROPIC_API_KEY`          | Modal          | Claude API access                                     |
+| `DEEPSEEK_API_KEY`           | Global or Repo | DeepSeek API access                                   |
+| `OPENAI_OAUTH_REFRESH_TOKEN` | Global or Repo | OpenAI Codex access ([setup guide](OPENAI_MODELS.md)) |
+| `OPENAI_OAUTH_ACCOUNT_ID`    | Global or Repo | OpenAI Codex access ([setup guide](OPENAI_MODELS.md)) |
+| `DATABASE_URL`               | Repo           | Database connection string                            |
+| `AWS_ACCESS_KEY_ID`          | Repo           | AWS credentials for a specific project                |
+| `STRIPE_SECRET_KEY`          | Repo           | Stripe API key for a specific project                 |
 
 ---
 
 ## Troubleshooting
 
-### "Model not found" errors (Daytona provider)
+### "Model not found" errors
 
-If you're using `sandbox_provider = "daytona"` with Claude models and see "Model not found" errors,
-add your `ANTHROPIC_API_KEY` as a global secret in Settings. Unlike Modal, the Daytona provider does
-not inject LLM API keys automatically.
+If you see "Model not found" errors, add the API key for your selected model provider in the right
+place. For Claude, configure `ANTHROPIC_API_KEY` in the Modal secret used by the sandbox
+infrastructure. For DeepSeek, add `DEEPSEEK_API_KEY` as a global secret or a repository secret that
+overrides the global value.
 
 ### Secret not appearing in sandbox
 

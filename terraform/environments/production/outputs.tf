@@ -68,33 +68,28 @@ output "github_bot_worker_name" {
 # Web App
 output "web_app_url" {
   description = "Web app URL"
-  value       = var.web_platform == "vercel" ? module.web_app[0].production_url : local.web_app_url
+  value       = local.web_app_url
 }
 
 output "web_app_platform" {
   description = "Web app deployment platform"
-  value       = var.web_platform
+  value       = "cloudflare"
 }
 
 output "sandbox_provider" {
   description = "Sandbox backend selected for this deployment"
-  value       = var.sandbox_provider
-}
-
-output "web_app_project_id" {
-  description = "Vercel project ID (null when using Cloudflare)"
-  value       = var.web_platform == "vercel" ? module.web_app[0].project_id : null
+  value       = "modal"
 }
 
 # Modal
 output "modal_app_name" {
   description = "Modal app name"
-  value       = local.use_modal_backend ? module.modal_app[0].app_name : null
+  value       = module.modal_app.app_name
 }
 
 output "modal_health_url" {
   description = "Modal health check endpoint"
-  value       = local.use_modal_backend ? module.modal_app[0].api_health_url : null
+  value       = module.modal_app.api_health_url
 }
 
 # =============================================================================
@@ -109,7 +104,7 @@ output "verification_commands" {
     curl ${module.control_plane_worker.worker_url}/health
 
     # 2. Health check sandbox backend
-    ${local.use_modal_backend ? "curl ${module.modal_app[0].api_health_url}" : "# Daytona sandboxes use the REST API directly — no health endpoint to check"}
+    curl ${module.modal_app.api_health_url}
 
     # 3. Verify web app deployment
     curl ${local.web_app_url}

@@ -16,15 +16,3 @@ export interface GitHubProviderConfig {
   /** User-Agent value sent on outbound GitHub API requests */
   userAgent?: string;
 }
-
-/**
- * Configuration for GitLabSourceControlProvider.
- */
-export interface GitLabProviderConfig {
-  /** Personal access token for GitLab API access */
-  accessToken: string;
-  /** GitLab group namespace to scope repository listing (optional) */
-  namespace?: string;
-  /** User-Agent value sent on outbound GitLab API requests */
-  userAgent?: string;
-}

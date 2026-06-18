@@ -19,9 +19,10 @@ resource "null_resource" "control_plane_build" {
 module "control_plane_worker" {
   source = "../../modules/cloudflare-worker"
 
-  account_id  = var.cloudflare_account_id
-  worker_name = "open-inspect-control-plane-${local.name_suffix}"
-  script_path = local.control_plane_script_path
+  account_id       = var.cloudflare_account_id
+  worker_name      = "open-inspect-control-plane-${local.name_suffix}"
+  worker_subdomain = var.cloudflare_worker_subdomain
+  script_path      = local.control_plane_script_path
 
   kv_namespaces = [
     {
@@ -68,16 +69,12 @@ module "control_plane_worker" {
       { name = "WORKER_URL", value = local.control_plane_url },
       { name = "DEPLOYMENT_NAME", value = var.deployment_name },
       { name = "APP_NAME", value = var.app_name },
-      { name = "SANDBOX_PROVIDER", value = var.sandbox_provider },
+      { name = "SANDBOX_PROVIDER", value = "modal" },
+      { name = "MODAL_WORKSPACE", value = var.modal_workspace },
+      { name = "MODAL_ENVIRONMENT", value = var.modal_environment },
+      { name = "MODAL_ENVIRONMENT_WEB_SUFFIX", value = var.modal_environment_web_suffix },
     ],
-    local.use_modal_backend ? [{ name = "MODAL_WORKSPACE", value = var.modal_workspace }] : [],
-    local.use_daytona_backend ? [
-      { name = "DAYTONA_API_URL", value = var.daytona_api_url },
-      { name = "DAYTONA_BASE_SNAPSHOT", value = var.daytona_base_snapshot },
-    ] : [],
-    local.use_daytona_backend && var.daytona_target != "" ? [
-      { name = "DAYTONA_TARGET", value = var.daytona_target },
-    ] : []
+    []
   )
 
   secrets = concat(
@@ -91,14 +88,11 @@ module "control_plane_worker" {
       { name = "GITHUB_APP_PRIVATE_KEY", value = var.github_app_private_key },
       { name = "GITHUB_APP_INSTALLATION_ID", value = var.github_app_installation_id },
     ],
-    local.use_modal_backend ? [
+    [
       { name = "MODAL_TOKEN_ID", value = var.modal_token_id },
       { name = "MODAL_TOKEN_SECRET", value = var.modal_token_secret },
       { name = "MODAL_API_SECRET", value = var.modal_api_secret },
-    ] : [],
-    local.use_daytona_backend ? [
-      { name = "DAYTONA_API_KEY", value = var.daytona_api_key },
-    ] : [],
+    ],
     # Slack bot token enables the agent-initiated `slack-notify` endpoint.
     # Shares the variable with the slack-bot worker; bound here so the same
     # token can authorize chat.postMessage from agent tool calls.
@@ -127,6 +121,5 @@ module "control_plane_worker" {
     module.session_index_kv,
     null_resource.d1_migrations,
     module.linear_bot_worker,
-    module.daytona_infra,
   ]
 }

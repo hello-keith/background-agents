@@ -133,6 +133,7 @@ describe("evaluateSpawnDecision", () => {
   const config: SpawnConfig = {
     cooldownMs: 30000,
     readyWaitMs: 60000,
+    spawningTimeoutMs: 120000,
   };
 
   it('returns "restore" when snapshot exists and sandbox is stopped', () => {
@@ -207,6 +208,48 @@ describe("evaluateSpawnDecision", () => {
     };
 
     const decision = evaluateSpawnDecision(state, config, now, false);
+
+    expect(decision.action).toBe("skip");
+  });
+
+  it('returns "spawn" when stuck in "spawning" past the spawning timeout (recovers interrupted spawn)', () => {
+    const now = Date.now();
+    const state: SandboxState = {
+      status: "spawning",
+      createdAt: now - (config.spawningTimeoutMs + 1000),
+      snapshotImageId: null,
+      hasActiveWebSocket: false,
+    };
+
+    const decision = evaluateSpawnDecision(state, config, now, false);
+
+    expect(decision.action).toBe("spawn");
+  });
+
+  it('returns "spawn" when stuck in "connecting" past the spawning timeout', () => {
+    const now = Date.now();
+    const state: SandboxState = {
+      status: "connecting",
+      createdAt: now - (config.spawningTimeoutMs + 1000),
+      snapshotImageId: null,
+      hasActiveWebSocket: false,
+    };
+
+    const decision = evaluateSpawnDecision(state, config, now, false);
+
+    expect(decision.action).toBe("spawn");
+  });
+
+  it('still skips a stale "spawning" when a spawn is in progress in-memory', () => {
+    const now = Date.now();
+    const state: SandboxState = {
+      status: "spawning",
+      createdAt: now - (config.spawningTimeoutMs + 1000),
+      snapshotImageId: null,
+      hasActiveWebSocket: false,
+    };
+
+    const decision = evaluateSpawnDecision(state, config, now, true);
 
     expect(decision.action).toBe("skip");
   });
@@ -326,14 +369,14 @@ describe("evaluateSpawnDecision", () => {
     expect(DEFAULT_SPAWN_CONFIG.readyWaitMs).toBe(60000);
   });
 
-  // ---- Persistent resume (Daytona-style) ----
+  // ---- Persistent resume support ----
 
   it('returns "resume" when provider supports persistent resume and sandbox is stopped with providerObjectId', () => {
     const now = Date.now();
     const state: SandboxState = {
       status: "stopped",
       createdAt: now - 120000,
-      providerObjectId: "daytona-abc123",
+      providerObjectId: "provider-abc123",
       snapshotImageId: null,
       hasActiveWebSocket: false,
     };
@@ -342,7 +385,7 @@ describe("evaluateSpawnDecision", () => {
 
     expect(decision.action).toBe("resume");
     if (decision.action === "resume") {
-      expect(decision.providerObjectId).toBe("daytona-abc123");
+      expect(decision.providerObjectId).toBe("provider-abc123");
     }
   });
 
@@ -351,7 +394,7 @@ describe("evaluateSpawnDecision", () => {
     const state: SandboxState = {
       status: "stale",
       createdAt: now - 120000,
-      providerObjectId: "daytona-abc123",
+      providerObjectId: "provider-abc123",
       snapshotImageId: null,
       hasActiveWebSocket: false,
     };
@@ -366,7 +409,7 @@ describe("evaluateSpawnDecision", () => {
     const state: SandboxState = {
       status: "stopped",
       createdAt: now - 120000,
-      providerObjectId: "daytona-abc123",
+      providerObjectId: "provider-abc123",
       snapshotImageId: "img-abc123",
       hasActiveWebSocket: false,
     };
@@ -411,7 +454,7 @@ describe("evaluateSpawnDecision", () => {
     const state: SandboxState = {
       status: "stopped",
       createdAt: now - 120000,
-      providerObjectId: "daytona-abc123",
+      providerObjectId: "provider-abc123",
       snapshotImageId: null,
       hasActiveWebSocket: false,
     };
@@ -426,7 +469,7 @@ describe("evaluateSpawnDecision", () => {
     const state: SandboxState = {
       status: "failed",
       createdAt: now - 120000,
-      providerObjectId: "daytona-abc123",
+      providerObjectId: "provider-abc123",
       snapshotImageId: null,
       hasActiveWebSocket: false,
     };
@@ -722,19 +765,28 @@ describe("evaluateConnectingTimeout", () => {
     expect(result.elapsedMs).toBe(config.timeoutMs);
   });
 
-  it("ignores all non-connecting statuses", () => {
+  it("returns timed out when stuck in spawning past timeout (interrupted spawn)", () => {
+    const now = Date.now();
+    const createdAt = now - 130_000; // 130s ago, past 120s timeout
+
+    const result = evaluateConnectingTimeout("spawning", createdAt, config, now);
+
+    expect(result.isTimedOut).toBe(true);
+    expect(result.elapsedMs).toBe(130_000);
+  });
+
+  it("returns not timed out for spawning within timeout window", () => {
+    const now = Date.now();
+    const result = evaluateConnectingTimeout("spawning", now - 60_000, config, now);
+
+    expect(result.isTimedOut).toBe(false);
+  });
+
+  it("ignores all non-spawning/connecting statuses", () => {
     const now = Date.now();
     const old = now - 999_999;
 
-    for (const status of [
-      "pending",
-      "spawning",
-      "ready",
-      "running",
-      "stopped",
-      "failed",
-      "stale",
-    ] as const) {
+    for (const status of ["pending", "ready", "running", "stopped", "failed", "stale"] as const) {
       const result = evaluateConnectingTimeout(status, old, config, now);
       expect(result.isTimedOut).toBe(false);
     }

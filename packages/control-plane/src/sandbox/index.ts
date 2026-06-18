@@ -33,19 +33,10 @@ export {
 
 // Modal provider
 export { ModalSandboxProvider, createModalProvider } from "./providers/modal-provider";
-export { DaytonaSandboxProvider, createDaytonaProvider } from "./providers/daytona-provider";
-export {
-  DaytonaRestClient,
-  DaytonaNotFoundError,
-  DaytonaApiError,
-  createDaytonaRestClient,
-  type DaytonaRestConfig,
-  type DaytonaSandboxResponse,
-  type DaytonaCreateSandboxParams,
-} from "./daytona-rest-client";
 export {
   resolveSandboxBackendName,
   isModalSandboxBackend,
+  supportsRepoImageBackend,
   type SandboxBackendName,
 } from "./provider-name";
 

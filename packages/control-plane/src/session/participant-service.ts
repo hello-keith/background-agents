@@ -3,7 +3,7 @@
  *
  * Extracted from SessionDO to reduce its size. Handles:
  * - Creating and looking up participants
- * - SCM OAuth token refresh (GitHub, Bitbucket, etc.)
+ * - GitHub OAuth token refresh
  * - Resolving auth context for PR creation
  */
 

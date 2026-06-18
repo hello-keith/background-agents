@@ -83,9 +83,11 @@ The bot is deployed via Terraform as a standalone Cloudflare Worker alongside th
 
 The existing GitHub App needs these additions:
 
-**Permissions**: `Pull requests: Read & write`, `Issues: Read & write`
+**Permissions**: `Pull requests: Read & write`, `Issues: Read & write`. Add `Checks: Read-only` when
+using `check_suite.completed` automations.
 
-**Event subscriptions**: `Pull request`, `Issue comment`, `Pull request review comment`
+**Event subscriptions**: `Pull request`, `Issue comment`, `Pull request review comment`, `Issues`.
+Add `Check suite` when using `check_suite.completed` automations.
 
 **Webhook URL**: `https://open-inspect-github-bot-{suffix}.{account}.workers.dev/webhooks/github`
 
@@ -93,23 +95,36 @@ The existing GitHub App needs these additions:
 
 ### Sandbox Prerequisites
 
-For the agent to interact with GitHub from the sandbox, two prerequisites must be met:
+For the agent to interact with GitHub from the sandbox, these prerequisites must be met:
 
-1. **`gh` CLI** installed in the Modal sandbox image (`packages/modal-infra/src/images/base.py`)
-2. **`GITHUB_TOKEN`** injected as an environment variable at sandbox spawn time by the lifecycle
-   manager
+1. **`gh` CLI** installed in the sandbox image (`packages/modal-infra/src/images/base.py`)
+2. **Git credential helper** configured in the sandbox image/runtime so git operations can request
+   short-lived GitHub credentials from the control plane
+
+Fresh sandboxes get GitHub CLI credentials through the helper rather than spawn-time token
+injection. `GITHUB_TOKEN` and `GITHUB_APP_TOKEN` env fallbacks are only used for legacy snapshots
+and repo images when the user has not provided an explicit GitHub CLI token. One-shot image-build
+sandboxes use only the narrower `VCS_CLONE_TOKEN` fallback because they cannot call the
+control-plane credential broker. For git operations, the helper keeps the existing installation-wide
+access model and can authenticate auxiliary private GitHub repos reachable by the App installation.
 
 ## Webhook Events
 
 | Event                         | Action             | Trigger                     | Handler                   |
 | ----------------------------- | ------------------ | --------------------------- | ------------------------- |
 | `pull_request`                | `opened`           | Non-draft PR opened         | `handlePullRequestOpened` |
-| `pull_request`                | `review_requested` | Compatibility event path    | `handleReviewRequested`   |
+| `pull_request`                | `review_requested` | Manual reviewer request     | `handleReviewRequested`   |
 | `issue_comment`               | `created`          | @mention in a PR comment    | `handleIssueComment`      |
 | `pull_request_review_comment` | `created`          | @mention in a review thread | `handleReviewComment`     |
 
 All events are processed asynchronously via `executionCtx.waitUntil()`. The webhook endpoint returns
 200 immediately after signature verification and delivery dedupe.
+
+The webhook endpoint also forwards normalized events to the control plane for GitHub Event
+automations. Supported automation event types are `pull_request.opened`, `pull_request.synchronize`,
+`pull_request.closed`, `issue_comment.created`, `pull_request_review_comment.created`,
+`check_suite.completed`, `issues.opened`, and `issues.labeled`. Events that do not start a bot
+session directly can still trigger automations after normalization.
 
 ### Handler Flows
 
@@ -123,8 +138,9 @@ All events are processed asynchronously via `executionCtx.waitUntil()`. The webh
 
 **Review Requested (compatibility path):**
 
-This handler is retained for webhook compatibility. The user-facing GitHub workflow does not ask
-people to request the GitHub App bot through the PR reviewer picker.
+Assigning the GitHub App bot through the PR reviewer picker is supported for manual review requests.
+It remains a compatibility path; auto-review and `@mention` comments are the recommended day-to-day
+workflows.
 
 1. Check `requested_reviewer.login` matches `GITHUB_BOT_USERNAME` — return early if not
 2. Post eyes reaction on the PR (fire-and-forget)

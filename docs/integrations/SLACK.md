@@ -5,10 +5,31 @@ the same Slack thread, set personal defaults in App Home, and ask agents to post
 that workflow is enabled.
 
 This guide is for people using the Slack integration day to day. If you are installing the Slack app
-or deploying the worker, start with
-[Getting Started](../GETTING_STARTED.md#step-4-create-slack-app-optional) and
-[Complete Slack Setup](../GETTING_STARTED.md#step-7b-complete-slack-setup-if-using-slack). Optional
+or deploying the worker, start with [Getting Started](../GETTING_STARTED.md) and
+[full self-hosted deployment](../SETUP_GUIDE.md#path-c-full-self-hosted-deployment). Optional
 notification controls and safety notes are covered near the end.
+
+---
+
+## Slack App Setup
+
+For self-hosted deployments, create the Slack app before deployment and finish URL setup after the
+Slack bot worker is live.
+
+1. In **OAuth & Permissions**, add these bot token scopes: `app_mentions:read`, `chat:write`,
+   `channels:history`, `channels:read`, `groups:history`, `groups:read`, `im:history`, `im:read`,
+   `reactions:write`, and `users:read`.
+2. Install or reinstall the app, then put the bot token in `slack_bot_token` and the signing secret
+   in `slack_signing_secret`.
+3. In **App Home**, turn on the **Home** tab.
+4. In **Event Subscriptions**, set the request URL to
+   `https://open-inspect-slack-bot-{deployment_name}.YOUR-SUBDOMAIN.workers.dev/events` and
+   subscribe to `app_home_opened`, `app_mention`, and `message.im`.
+5. In **Interactivity & Shortcuts**, set the request URL to
+   `https://open-inspect-slack-bot-{deployment_name}.YOUR-SUBDOMAIN.workers.dev/interactions`.
+6. Invite the bot to any channel where it should respond to mentions or post agent notifications.
+
+Reinstall the app after changing scopes so Slack issues a token with the new permissions.
 
 ---
 
@@ -199,8 +220,8 @@ These notes are most useful for workspace admins deciding where the Slack bot sh
 - Slack bot tokens stay server-side. They are not sent to sandboxes.
 - Slack requests are verified before Open-Inspect acts on them.
 - Slack-created sessions use deployment-level repository access. The repositories shown in Slack are
-  the repositories accessible to the configured GitHub App or SCM installation, not a per-Slack-user
-  GitHub permission list.
+  the repositories accessible to the configured GitHub App installation, not a per-Slack-user GitHub
+  permission list.
 - Slack identity linking is best-effort and is not used to approve repository access. To restrict
   what Slack sessions can touch, limit the GitHub App installation to selected repositories and
   invite the Slack bot only into trusted channels.
@@ -219,7 +240,7 @@ Check that the bot has been invited to the channel and that your message mention
 does not act on ordinary channel messages.
 
 If setup was just changed, confirm the Slack app event subscriptions and interactivity URLs in
-[Complete Slack Setup](../GETTING_STARTED.md#step-7b-complete-slack-setup-if-using-slack).
+[full self-hosted deployment](../SETUP_GUIDE.md#path-c-full-self-hosted-deployment).
 
 ### DMs do not start sessions
 

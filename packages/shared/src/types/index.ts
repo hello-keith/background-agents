@@ -290,6 +290,12 @@ export type SandboxEvent =
       timestamp: number;
     }
   | {
+      type: "session_title";
+      title: string;
+      sandboxId: string;
+      timestamp: number;
+    }
+  | {
       type: "user_message";
       content: string;
       messageId: string;
@@ -366,6 +372,7 @@ export type ServerMessage =
   | { type: "code_server_info"; url: string; password: string }
   | { type: "ttyd_info"; url: string; token: string }
   | { type: "tunnel_urls"; urls: Record<string, string> }
+  | { type: "sandbox_dashboard_url"; url: string }
   | { type: "error"; code: string; message: string };
 
 // Session state sent to clients
@@ -390,6 +397,7 @@ export interface SessionState {
   tunnelUrls?: Record<string, string> | null;
   ttydUrl?: string | null;
   ttydToken?: string | null;
+  sandboxDashboardUrl?: string | null;
 }
 
 // Participant presence info
@@ -411,6 +419,7 @@ export interface InstallationRepository {
   description: string | null;
   private: boolean;
   defaultBranch: string;
+  archived: boolean;
   language?: string | null;
   topics?: string[];
 }
@@ -611,6 +620,20 @@ export interface SpawnContext {
 }
 
 /** Returned by child DO's GET /internal/child-summary */
+export interface ChildSessionFinalResponse extends AgentResponse {
+  messageId: string;
+  completedAt: number | null;
+  eventCount: number;
+  eventLimitReached: boolean;
+}
+
+export interface ChildSessionTrajectory {
+  events: EventResponse[];
+  hasMore: boolean;
+  cursor?: string;
+  limit: number;
+}
+
 export interface ChildSessionDetail {
   session: {
     id: string;
@@ -626,6 +649,8 @@ export interface ChildSessionDetail {
   sandbox: { status: SandboxStatus } | null;
   artifacts: Array<{ type: string; url: string; metadata: unknown }>;
   recentEvents: Array<{ type: string; data: unknown; createdAt: number }>;
+  finalResponse?: ChildSessionFinalResponse | null;
+  trajectory?: ChildSessionTrajectory;
 }
 
 // ─── Analytics ───────────────────────────────────────────────────────────────

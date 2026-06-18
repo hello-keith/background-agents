@@ -12,7 +12,6 @@ Updated: 2026-01-15 to fix Sandbox.create API
 
 import asyncio
 import json
-import os
 import secrets
 import time
 from dataclasses import dataclass
@@ -20,7 +19,12 @@ from typing import Any
 
 import modal
 
-from sandbox_runtime.constants import CODE_SERVER_PORT, TTYD_PROXY_PORT
+from sandbox_runtime.constants import (
+    CODE_SERVER_PORT,
+    EXPECTED_TUNNEL_PORTS_ENV_VAR,
+    TTYD_PROXY_PORT,
+    TUNNEL_ENV_FILE_PATH,
+)
 from sandbox_runtime.log_config import get_logger
 from sandbox_runtime.types import SandboxStatus, SessionConfig
 
@@ -32,6 +36,29 @@ log = get_logger("manager")
 DEFAULT_SANDBOX_TIMEOUT_SECONDS = 7200  # 2 hours
 SNAPSHOT_FILESYSTEM_TIMEOUT_SECONDS = 300
 MAX_TUNNEL_PORTS = 10
+
+
+def _resource_kwargs(settings: dict[str, Any] | None) -> dict[str, Any]:
+    """Map sandbox settings to Modal resource kwargs.
+
+    `cpuCores` -> Modal `cpu` (cores, fractional allowed), `memoryMib` -> Modal
+    `memory` (MiB). The control plane owns normalization; this only maps
+    already-normalized settings into provider-specific argument names.
+    """
+    if not settings:
+        return {}
+
+    kwargs: dict[str, Any] = {}
+
+    cpu_cores = settings.get("cpuCores")
+    if cpu_cores is not None:
+        kwargs["cpu"] = float(cpu_cores)
+
+    memory_mib = settings.get("memoryMib")
+    if memory_mib is not None:
+        kwargs["memory"] = memory_mib
+
+    return kwargs
 
 
 @dataclass
@@ -145,7 +172,7 @@ class SandboxManager:
         return resolved
 
     @staticmethod
-    def _validate_ports(raw: list) -> list[int]:
+    def _validate_ports(raw: list[Any]) -> list[int]:
         """Validate and sanitize tunnel ports: must be int, 1-65535, max MAX_TUNNEL_PORTS."""
         ports: list[int] = []
         for p in raw:
@@ -203,28 +230,84 @@ class SandboxManager:
         ttyd_url = resolved.pop(TTYD_PROXY_PORT, None)
         extra_urls = resolved if resolved else None
 
+        if extra_urls:
+            await SandboxManager._write_tunnel_env_file(sandbox, sandbox_id, extra_urls)
+
         return code_server_url, ttyd_url, extra_urls
 
     @staticmethod
-    def _inject_vcs_env_vars(env_vars: dict[str, str], clone_token: str | None) -> None:
-        """Inject VCS-neutral env vars based on SCM_PROVIDER."""
-        scm_provider = os.environ.get("SCM_PROVIDER", "github")
-        if scm_provider == "bitbucket":
-            env_vars["VCS_HOST"] = "bitbucket.org"
-            env_vars["VCS_CLONE_USERNAME"] = "x-token-auth"
-        elif scm_provider == "gitlab":
-            env_vars["VCS_HOST"] = "gitlab.com"
-            env_vars["VCS_CLONE_USERNAME"] = "oauth2"
-        else:
-            env_vars["VCS_HOST"] = "github.com"
-            env_vars["VCS_CLONE_USERNAME"] = "x-access-token"
+    async def _write_tunnel_env_file(
+        sandbox: modal.Sandbox,
+        sandbox_id: str,
+        tunnel_urls: dict[int, str],
+    ) -> None:
+        """Write tunnel URLs to TUNNEL_ENV_FILE_PATH as a dotenv file.
+
+        Failures are logged but do not block sandbox creation; URLs are also
+        returned to the control plane via the SandboxHandle.
+        """
+        lines = [f"TUNNEL_{port}={url}" for port, url in sorted(tunnel_urls.items())]
+        content = "\n".join(lines) + "\n"
+        try:
+            f = await sandbox.open.aio(TUNNEL_ENV_FILE_PATH, "w")
+            try:
+                await f.write.aio(content)
+            finally:
+                await f.close.aio()
+            log.info(
+                "tunnel.urls_written",
+                sandbox_id=sandbox_id,
+                path=TUNNEL_ENV_FILE_PATH,
+                ports=list(tunnel_urls.keys()),
+            )
+        except Exception as e:
+            log.warn(
+                "tunnel.urls_write_failed",
+                sandbox_id=sandbox_id,
+                path=TUNNEL_ENV_FILE_PATH,
+                exc=e,
+            )
+
+    @staticmethod
+    def _inject_vcs_env_vars(
+        env_vars: dict[str, str | None],
+        clone_token: str | None,
+        *,
+        include_github_cli_aliases: bool = False,
+    ) -> None:
+        """Inject SCM provider metadata into the sandbox environment.
+
+        For interactive sandboxes ``clone_token`` should be ``None``. Git
+        authenticates per-request via the system git credential helper, which
+        fetches a fresh token from the control plane — embedding a token in
+        env would silently fail once it expires (or immediately, for
+        providers with short-lived tokens like GitHub Apps).
+
+        For image-build sandboxes (one-shot, no control-plane access)
+        ``clone_token`` is required: the helper falls back to the env-var
+        token when ``CONTROL_PLANE_URL`` / ``SANDBOX_AUTH_TOKEN`` are unset.
+
+        ``include_github_cli_aliases`` adds fallback ``GITHUB_TOKEN`` /
+        ``GITHUB_APP_TOKEN`` for legacy snapshots/repo images that predate the
+        gh wrapper. These aliases are only injected when the user has not
+        provided a GitHub CLI token. Fallback injection is marked with
+        ``OI_GITHUB_TOKEN_IS_FALLBACK=1`` so helper-capable boots refresh past
+        the static restore token, while genuine user-provided tokens remain
+        authoritative.
+        """
+        env_vars["VCS_HOST"] = "github.com"
+        env_vars["VCS_CLONE_USERNAME"] = "x-access-token"
 
         if clone_token:
             env_vars["VCS_CLONE_TOKEN"] = clone_token
-            if scm_provider == "github":
-                # Required by gh CLI and git push operations in the sandbox
-                env_vars["GITHUB_APP_TOKEN"] = clone_token
-                env_vars["GITHUB_TOKEN"] = clone_token
+            if include_github_cli_aliases:
+                has_user_github_cli_token = any(
+                    env_vars.get(key) for key in ("GH_TOKEN", "GITHUB_TOKEN", "GITHUB_APP_TOKEN")
+                )
+                if not has_user_github_cli_token:
+                    env_vars["GITHUB_TOKEN"] = clone_token
+                    env_vars["GITHUB_APP_TOKEN"] = clone_token
+                    env_vars["OI_GITHUB_TOKEN_IS_FALLBACK"] = "1"
 
     async def create_sandbox(
         self,
@@ -251,7 +334,7 @@ class SandboxManager:
             sandbox_id = f"sandbox-{config.repo_owner}-{config.repo_name}-{int(time.time() * 1000)}"
 
         # Prepare environment variables (user vars first, system vars override)
-        env_vars: dict[str, str] = {}
+        env_vars: dict[str, str | None] = {}
 
         if config.user_env_vars:
             env_vars.update(config.user_env_vars)
@@ -267,7 +350,21 @@ class SandboxManager:
             }
         )
 
-        self._inject_vcs_env_vars(env_vars, config.clone_token)
+        # A boot from a pre-built image (session snapshot or repo image) may
+        # run an entrypoint built before the credential-helper migration: no
+        # helper, and the old entrypoint expects VCS_CLONE_TOKEN in env to
+        # rewrite origin. Pass the fresh token through for those (with the
+        # gh-CLI aliases + fallback marker, so helper-capable images refresh
+        # past it). Fresh base-image boots rely on the in-sandbox credential
+        # helper and need no token in env. Repo images are selected by SHA and
+        # aren't rebuilt by a CACHE_BUSTER bump, so we can't assume they're
+        # current.
+        boots_from_prebuilt_image = bool(config.snapshot_id or config.repo_image_id)
+        self._inject_vcs_env_vars(
+            env_vars,
+            clone_token=config.clone_token if boots_from_prebuilt_image else None,
+            include_github_cli_aliases=boots_from_prebuilt_image,
+        )
 
         code_server_password: str | None = None
         if config.code_server_enabled:
@@ -294,19 +391,21 @@ class SandboxManager:
         else:
             image = base_image
 
-        # Create the sandbox
-        # The entrypoint command is passed as positional args
-        create_kwargs: dict = {
+        exposed_ports, tunnel_ports = self._collect_exposed_ports(
+            config.code_server_enabled, terminal_enabled, config.settings
+        )
+        if tunnel_ports:
+            env_vars[EXPECTED_TUNNEL_PORTS_ENV_VAR] = ",".join(str(p) for p in tunnel_ports)
+
+        create_kwargs: dict[str, Any] = {
             "image": image,
             "app": app,
             "secrets": [llm_secrets],
             "timeout": config.timeout_seconds,
             "workdir": "/workspace",
             "env": env_vars,
+            **_resource_kwargs(config.settings),
         }
-        exposed_ports, tunnel_ports = self._collect_exposed_ports(
-            config.code_server_enabled, terminal_enabled, config.settings
-        )
         if exposed_ports:
             create_kwargs["encrypted_ports"] = exposed_ports
 
@@ -372,7 +471,7 @@ class SandboxManager:
         sandbox_id = f"build-{repo_owner}-{repo_name}-{int(time.time() * 1000)}"
 
         # Prepare environment variables (user vars first, system vars override)
-        env_vars: dict[str, str] = {}
+        env_vars: dict[str, str | None] = {}
 
         if user_env_vars:
             env_vars.update(user_env_vars)
@@ -533,7 +632,7 @@ class SandboxManager:
     async def restore_from_snapshot(
         self,
         snapshot_image_id: str,
-        session_config: SessionConfig | dict,
+        session_config: SessionConfig | dict[str, Any],
         sandbox_id: str | None = None,
         control_plane_url: str = "",
         sandbox_auth_token: str = "",
@@ -565,8 +664,10 @@ class SandboxManager:
 
         # Handle both SessionConfig and dict
         if isinstance(session_config, dict):
-            repo_owner = session_config.get("repo_owner", "")
-            repo_name = session_config.get("repo_name", "")
+            raw_repo_owner = session_config.get("repo_owner", "")
+            raw_repo_name = session_config.get("repo_name", "")
+            repo_owner = raw_repo_owner if isinstance(raw_repo_owner, str) else ""
+            repo_name = raw_repo_name if isinstance(raw_repo_name, str) else ""
             session_config_json = json.dumps(session_config)
         else:
             repo_owner = session_config.repo_owner
@@ -581,7 +682,7 @@ class SandboxManager:
         image = modal.Image.from_id(snapshot_image_id)
 
         # Prepare environment variables (user vars first, system vars override)
-        env_vars: dict[str, str] = {}
+        env_vars: dict[str, str | None] = {}
 
         if user_env_vars:
             env_vars.update(user_env_vars)
@@ -599,7 +700,16 @@ class SandboxManager:
             }
         )
 
-        self._inject_vcs_env_vars(env_vars, clone_token)
+        # Snapshot restore still passes the clone token through. Snapshots
+        # taken before the credential-helper migration ship an entrypoint
+        # that reads VCS_CLONE_TOKEN from env and embeds it in the origin
+        # URL — without it, those legacy snapshots can't fetch. New
+        # entrypoints ignore the env var and route through the helper.
+        # GITHUB_TOKEN/GITHUB_APP_TOKEN aliases are restored too so the gh
+        # CLI keeps working on snapshots predating the gh wrapper.
+        self._inject_vcs_env_vars(
+            env_vars, clone_token=clone_token, include_github_cli_aliases=True
+        )
 
         code_server_password: str | None = None
         if code_server_enabled:
@@ -613,18 +723,21 @@ class SandboxManager:
         if agent_slack_notify_enabled:
             env_vars["AGENT_SLACK_NOTIFY_ENABLED"] = "true"
 
-        # Create the sandbox from the snapshot image
-        create_kwargs: dict = {
-            "image": image,  # Use the snapshot image directly
+        exposed_ports, tunnel_ports = self._collect_exposed_ports(
+            code_server_enabled, terminal_enabled, settings
+        )
+        if tunnel_ports:
+            env_vars[EXPECTED_TUNNEL_PORTS_ENV_VAR] = ",".join(str(p) for p in tunnel_ports)
+
+        create_kwargs: dict[str, Any] = {
+            "image": image,
             "app": app,
             "secrets": [llm_secrets],
             "timeout": timeout_seconds,
             "workdir": "/workspace",
             "env": env_vars,
+            **_resource_kwargs(settings),
         }
-        exposed_ports, tunnel_ports = self._collect_exposed_ports(
-            code_server_enabled, terminal_enabled, settings
-        )
         if exposed_ports:
             create_kwargs["encrypted_ports"] = exposed_ports
 

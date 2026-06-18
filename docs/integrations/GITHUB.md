@@ -5,9 +5,8 @@ can automatically review new PRs and respond when you mention it in PR comments 
 threads.
 
 This guide is for people using the GitHub integration day to day. If you are installing the GitHub
-App or deploying the bot worker, start with
-[Create GitHub App](../GETTING_STARTED.md#step-3-create-github-app) and
-[Complete GitHub Bot Setup](../GETTING_STARTED.md#step-7c-complete-github-bot-setup-if-using-github-bot).
+App or deploying the bot worker, start with [GitHub App](../GETTING_STARTED.md#github-app) and
+[full self-hosted deployment](../SETUP_GUIDE.md#path-c-full-self-hosted-deployment).
 
 ---
 
@@ -30,13 +29,15 @@ App or deploying the bot worker, start with
 | Workflow                  | How it works                                                               |
 | ------------------------- | -------------------------------------------------------------------------- |
 | Auto-review new PRs       | Review non-draft PRs when they are opened, if auto-review is enabled       |
+| Manual review request     | Assign the GitHub App bot as a PR reviewer                                 |
 | Respond to PR comments    | Mention the bot in a PR conversation comment                               |
 | Respond to review threads | Mention the bot in an inline review comment                                |
 | Post back to GitHub       | Submit a PR review, reply to a review thread, or post a PR summary comment |
 | Customize behavior        | Set repository scope, trigger users, models, and custom instructions       |
 
-Open-Inspect does not use GitHub slash commands today, and it does not support requesting the GitHub
-App bot through the PR reviewer picker. Use auto-review or `@mention` comments instead.
+Open-Inspect does not use GitHub slash commands today. The PR reviewer picker is supported as a
+compatibility path for manual code review requests; auto-review and `@mention` comments remain the
+recommended day-to-day workflows.
 
 ---
 
@@ -202,7 +203,7 @@ override nor global default sets a model, sessions use the deployment default mo
 
 Check that the GitHub App is installed on the repository and that the GitHub Bot worker is enabled.
 Then confirm the webhook URL, webhook secret, subscribed events, and `github_bot_username` in
-[Complete GitHub Bot Setup](../GETTING_STARTED.md#step-7c-complete-github-bot-setup-if-using-github-bot).
+[full self-hosted deployment](../SETUP_GUIDE.md#path-c-full-self-hosted-deployment).
 
 Also check **Settings > Integrations > GitHub**. For direct GitHub Bot workflows, the repository may
 be outside the selected repository scope, or the triggering user may be outside the allowed user

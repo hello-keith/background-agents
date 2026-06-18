@@ -9,15 +9,20 @@ how to configure your deployment to use them.
 
 ## Supported Models
 
-| Model         | Description                    |
-| ------------- | ------------------------------ |
-| GPT 5.2       | Fast baseline model (400K ctx) |
-| GPT 5.4       | Latest flagship model          |
-| GPT 5.2 Codex | Optimized for code tasks       |
-| GPT 5.3 Codex | Latest codex variant           |
+For the full model list, including Claude Fable 5 and other Anthropic models, see
+[Available Models](AVAILABLE_MODELS.md).
 
-OpenAI models support reasoning effort levels: none, low, medium, high, and extra high (default:
-high for Codex models).
+| Model               | Description                    |
+| ------------------- | ------------------------------ |
+| GPT 5.2             | Fast baseline model (400K ctx) |
+| GPT 5.4             | Flagship model                 |
+| GPT 5.5             | Latest flagship model          |
+| GPT 5.2 Codex       | Optimized for code tasks       |
+| GPT 5.3 Codex       | Latest codex variant           |
+| GPT 5.3 Codex Spark | Lightweight Codex variant      |
+
+OpenAI models support reasoning effort levels: none, low, medium, high, and xhigh (default: high for
+Codex models).
 
 ---
 
@@ -46,7 +51,8 @@ required tokens.
 ### Step 2: Add Secrets to Your Deployment
 
 1. Go to your Open-Inspect web app's **Settings** page
-2. Add the following repository secrets:
+2. Add the following global secrets, or add them as repository secrets when one repo should use a
+   different OpenAI account:
 
    | Secret Name                  | Value                           |
    | ---------------------------- | ------------------------------- |
@@ -67,7 +73,9 @@ sandbox needs to make an OpenAI API call, it requests a short-lived access token
 plane, which handles token refresh and rotation automatically. Only the temporary access token is
 present inside the sandbox.
 
-Credentials are scoped per repository, so different repos can use different OpenAI accounts.
+The control plane checks repository secrets first, then global secrets. Repository secrets override
+global OpenAI credentials, so different repos can use different OpenAI accounts. Refreshed and
+rotated tokens are written back to the same scope they were read from.
 
 ---
 
@@ -80,8 +88,8 @@ Open-Inspect.
 
 ### Session fails to start with an OpenAI model
 
-Verify that both `OPENAI_OAUTH_REFRESH_TOKEN` and `OPENAI_OAUTH_ACCOUNT_ID` are set in your
-repository secrets (Settings page). The refresh token may have expired — repeat Step 1 to obtain
+Verify that both `OPENAI_OAUTH_REFRESH_TOKEN` and `OPENAI_OAUTH_ACCOUNT_ID` are set in global
+secrets or in the repository's secrets. The refresh token may have expired; repeat Step 1 to obtain
 fresh credentials.
 
 ### "Token refresh failed" errors

@@ -9,13 +9,13 @@ Open-Inspect provides a hosted background coding agent that can:
 
 - Work on tasks in the background while you focus on other things
 - Access full development environments (Node.js, Python, git, browser automation, VS Code)
-- Connect from anywhere — web UI, Slack, GitHub PRs, Linear issues, or webhooks
+- Connect from anywhere - web UI, Slack, GitHub PRs, Linear issues, or webhooks
 - Enable multiplayer sessions where multiple people can collaborate in real time
 - Create PRs with proper commit attribution to the prompting user
-- Run on a schedule — cron jobs, Sentry alerts, and webhook-triggered automations
+- Run on a schedule - cron jobs, Sentry alerts, and webhook-triggered automations
 - Spawn parallel sub-tasks that work in separate sandboxes simultaneously
-- Use your choice of AI model — Anthropic Claude, OpenAI Codex (via ChatGPT subscription), or
-  OpenCode Zen
+- Use your choice of AI model, including Anthropic Claude, OpenAI Codex (via ChatGPT subscription),
+  OpenCode Zen, or DeepSeek
 
 ## Security Model (Single-Tenant Only)
 
@@ -24,23 +24,27 @@ Open-Inspect provides a hosted background coding agent that can:
 
 ### How It Works
 
-The system uses a shared GitHub App installation for all git operations (clone, push). This means:
+The system uses a shared GitHub App installation for git operations (clone, fetch, push). The
+control plane mints short-lived installation tokens server-side and brokers them to sandboxes
+through the git credential helper on demand. This means:
 
 - **All users share the same GitHub App credentials** - The GitHub App must be installed on your
   organization's repositories, and any user of the system can access any repo the App has access to
 - **No per-user repository access validation** - The system does not verify that a user has
   permission to access a specific repository before creating a session
-- **User OAuth tokens are used for PR creation** - PRs are created using the user's GitHub OAuth
-  token, ensuring proper attribution and that users can only create PRs on repos they have write
-  access to
+- **GitHub users' OAuth tokens are used for PR creation** - For GitHub logins, PRs are created using
+  the user's GitHub OAuth token, ensuring proper attribution and that they can only create PRs on
+  repos they have write access to. Users who sign in another way (e.g. Google) carry no SCM token,
+  so their PRs fall back to the shared GitHub App bot
 
 ### Token Architecture
 
-| Token Type       | Purpose                | Scope                            |
-| ---------------- | ---------------------- | -------------------------------- |
-| GitHub App Token | Clone repos, push code | All repos where App is installed |
-| User OAuth Token | Create PRs, user info  | Repos user has access to         |
-| WebSocket Token  | Real-time session auth | Single session                   |
+| Token Type         | Purpose                                | Scope                            |
+| ------------------ | -------------------------------------- | -------------------------------- |
+| GitHub App Token   | Brokered git clone/fetch/push auth     | All repos where App is installed |
+| User OAuth Token   | Create PRs, user info                  | Repos user has access to         |
+| Sandbox Auth Token | Sandbox-to-control-plane session calls | Single session                   |
+| WebSocket Token    | Real-time session auth                 | Single session                   |
 
 ### Why Single-Tenant Only
 
@@ -92,7 +96,7 @@ built for internal use where all employees are trusted and have access to compan
                                  │
                                  ▼
 ┌────────────────────────────────────────────────────────────────────┐
-│                      Data Plane (Modal)                            │
+│                 Data Plane (Sandbox Backend)                       │
 │  ┌──────────────────────────────────────────────────────────────┐  │
 │  │                     Session Sandbox                          │  │
 │  │  ┌───────────┐  ┌───────────┐  ┌───────────┐                 │  │
@@ -107,15 +111,16 @@ built for internal use where all employees are trusted and have access to compan
 
 ## Packages
 
-| Package                                 | Description                                 |
-| --------------------------------------- | ------------------------------------------- |
-| [modal-infra](packages/modal-infra)     | Modal sandbox infrastructure                |
-| [control-plane](packages/control-plane) | Cloudflare Workers + Durable Objects        |
-| [web](packages/web)                     | Next.js web client                          |
-| [slack-bot](packages/slack-bot)         | Slack integration (sessions from messages)  |
-| [github-bot](packages/github-bot)       | GitHub integration (auto-review, @mention)  |
-| [linear-bot](packages/linear-bot)       | Linear integration (issue → coding session) |
-| [shared](packages/shared)               | Shared types and utilities                  |
+| Package                                     | Description                                 |
+| ------------------------------------------- | ------------------------------------------- |
+| [control-plane](packages/control-plane)     | Cloudflare Workers + Durable Objects        |
+| [web](packages/web)                         | Next.js web client                          |
+| [sandbox-runtime](packages/sandbox-runtime) | Shared in-sandbox agent runtime             |
+| [modal-infra](packages/modal-infra)         | Modal sandbox infrastructure                |
+| [slack-bot](packages/slack-bot)             | Slack integration (sessions from messages)  |
+| [github-bot](packages/github-bot)           | GitHub integration (auto-review, @mention)  |
+| [linear-bot](packages/linear-bot)           | Linear integration (issue → coding session) |
+| [shared](packages/shared)                   | Shared types and utilities                  |
 
 ## Getting Started
 
@@ -135,11 +140,11 @@ To set up recurring scheduled tasks, see **[docs/AUTOMATIONS.md](docs/AUTOMATION
 
 Sessions start near-instantly through multiple layers of warming:
 
-- **Filesystem snapshots** — After each prompt, sandbox state is saved; follow-up sessions restore
+- **Filesystem snapshots** - After each prompt, sandbox state is saved; follow-up sessions restore
   instead of re-cloning
-- **Pre-built repo images** — Toggle per-repo in Settings; rebuilt every 30 minutes with latest
+- **Pre-built repo images** - Toggle per-repo in Settings; rebuilt every 30 minutes with latest
   commits and dependencies
-- **Proactive warming** — Sandbox begins spinning up as soon as you start typing, before you hit
+- **Proactive warming** - Sandbox begins spinning up as soon as you start typing, before you hit
   Enter
 
 ### Multiplayer Sessions
@@ -168,48 +173,55 @@ Choose the AI model that fits your task, with per-session reasoning effort contr
 
 | Provider     | Models                                                               |
 | ------------ | -------------------------------------------------------------------- |
-| Anthropic    | Claude Haiku 4.5, Sonnet 4.5/4.6, Opus 4.5/4.6/4.7                   |
+| Anthropic    | Claude Haiku 4.5, Sonnet 4.5/4.6, Opus 4.5/4.6/4.7/4.8, Fable 5      |
 | OpenAI       | GPT 5.2, GPT 5.4, GPT 5.5, GPT 5.2 Codex, 5.3 Codex, 5.3 Codex Spark |
-| OpenCode Zen | Kimi K2.5, MiniMax M2.5, GLM 5 (opt-in)                              |
+| OpenCode Zen | Kimi K2.5/K2.6, MiniMax M2.5, Qwen3.7 Max, GLM 5/5.1 (opt-in)        |
+| DeepSeek     | DeepSeek V4 Flash, DeepSeek V4 Pro (opt-in)                          |
 
-OpenAI models work with your existing ChatGPT subscription via OAuth — no separate API key needed.
-See **[docs/OPENAI_MODELS.md](docs/OPENAI_MODELS.md)** for setup instructions.
+OpenAI models work with your existing ChatGPT subscription via OAuth - no separate API key needed.
+See **[docs/AVAILABLE_MODELS.md](docs/AVAILABLE_MODELS.md)** for the full model list and
+**[docs/OPENAI_MODELS.md](docs/OPENAI_MODELS.md)** for OpenAI setup instructions.
 
 ### Client Integrations
 
 Interact with agents from wherever your team already works:
 
-- **Web UI** — Full session management with real-time streaming, model/reasoning selectors, terminal
+- **Web UI** - Full session management with real-time streaming, model/reasoning selectors, terminal
   panel, and multiplayer presence
-- **Slack Bot** — @mention or DM to start a session; replies thread back with results. Per-user
+- **Slack Bot** - @mention or DM to start a session; replies thread back with results. Per-user
   model and branch preferences via App Home. See [Slack integration](docs/integrations/SLACK.md)
-- **GitHub Bot** — Auto-review on PR open or respond to @mentions in PR comments. Configurable
+- **GitHub Bot** - Auto-review on PR open or respond to @mentions in PR comments. Configurable
   per-repo. See [GitHub integration](docs/integrations/GITHUB.md)
-- **Linear Bot** — Mention or assign the agent on an issue to start a coding session, post progress
+- **Linear Bot** - Mention or assign the agent on an issue to start a coding session, post progress
   activities, and link the resulting PR. See [Linear integration](docs/integrations/LINEAR.md)
-- **Webhooks** — Trigger sessions from any external system via authenticated HTTP POST
+- **Webhooks** - Trigger sessions from any external system via authenticated HTTP POST
 
 ### Automations
 
-Schedule recurring tasks or react to external events — no human in the loop:
+Schedule recurring tasks or react to external events - no human in the loop:
 
-- **Cron schedules** — Hourly, daily, weekly, monthly, or custom 5-field cron with timezone support
-- **Sentry alerts** — Auto-triage on new errors, regressions, or critical metric alerts
-- **Inbound webhooks** — JSONPath condition filters to gate which payloads spawn sessions
+- **Cron schedules** - Hourly, daily, weekly, monthly, or custom 5-field cron with timezone support
+- **Sentry alerts** - Auto-triage on new errors, regressions, or critical metric alerts
+- **Inbound webhooks** - JSONPath condition filters to gate which payloads spawn sessions
+- **GitHub events** - Start sessions from PR, issue, review-comment, and CI check-suite activity
 - Auto-pause after 3 consecutive failures, manual trigger button, full run history
 
 See **[docs/AUTOMATIONS.md](docs/AUTOMATIONS.md)** for setup instructions.
 
 ### Sandbox Environment
 
-Every session runs in an isolated Modal sandbox with a full development environment:
+Every session runs in an isolated sandbox backend with a full development environment:
 
 - **Pre-installed:** Node.js 22, Python 3.12, Bun, git, GitHub CLI, build-essential
 - **Browser automation:** agent-browser CLI with headless Chromium for screenshots, visual diffs,
   and UI verification
 - **Code-server:** Optional browser-based VS Code connected to the session workspace
 - **Web terminal:** ttyd-powered terminal accessible from the session UI
-- **Port tunneling:** Expose up to 10 dev server ports via encrypted tunnels
+- **Port tunneling:** Expose up to 10 dev server ports via encrypted tunnels. URLs are available
+  in-sandbox at `/workspace/.tunnels.env` before `.openinspect/start.sh` runs
+  ([details](docs/HOW_IT_WORKS.md#tunnel-urls-inside-the-sandbox))
+- **Sandbox settings:** Configure child-session limits and optional Modal resource reservations
+  globally or per repository
 - **Repo secrets:** AES-256-GCM encrypted, scoped per-repo or globally, injected as env vars at
   spawn time. Supports bulk `.env` paste import
 
@@ -219,7 +231,17 @@ Agents can decompose work into parallel child sessions:
 
 - `spawn-task` creates a child session in its own sandbox and returns immediately
 - Parent continues working while children run in parallel on separate branches
-- `get-task-status` and `cancel-task` for coordination
+- `get-task-status` without a task ID lists children; with a task ID it returns session, sandbox,
+  artifacts, and recent events
+- `includeResponse` retrieves the child's final assistant response when available
+- `includeTrajectory` adds a paginated event history; use `trajectoryLimit` and `trajectoryCursor`
+  to page through longer runs
+- `cancel-task` stops a running child task
+- `maxConcurrentChildSessions` defaults to 5 active children per parent
+- `maxTotalChildSessions` defaults to 15 total children per parent
+- Repo sandbox settings override global defaults. For Modal resources, set `cpuCores` to a positive
+  number and `memoryMib` to a positive integer in MiB. Blank fields inherit; clearing inherited repo
+  resource fields stores `null` so the provider default is used instead of the global value
 - Depth limits and per-repo guardrails enforced
 
 ### Repository Lifecycle Scripts
@@ -248,6 +270,8 @@ docker compose up -d postgres redis
   - `SETUP_TIMEOUT_SECONDS` (default `300`)
   - `START_TIMEOUT_SECONDS` (default `120`)
 - Both hooks receive `OPENINSPECT_BOOT_MODE` (`build`, `fresh`, `repo_image`, `snapshot_restore`)
+- Git operations in hooks can authenticate to other private GitHub repos when the shared
+  installation has access
 
 ## License
 

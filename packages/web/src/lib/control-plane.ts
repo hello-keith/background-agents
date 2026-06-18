@@ -4,7 +4,7 @@
  * Handles authentication and communication with the control plane.
  * On Cloudflare Workers, uses a service binding to avoid same-account
  * worker-to-worker fetch restrictions (error 1042). Falls back to
- * URL-based fetch for Vercel / local development.
+ * URL-based fetch for local development.
  */
 
 import { buildInternalAuthHeaders } from "@open-inspect/shared";
@@ -125,7 +125,7 @@ export async function controlPlaneFetch(
     return binding.fetch(`${baseUrl}${normalizedPath}`, fetchOptions);
   }
 
-  // Fallback: direct fetch (works on Vercel / local dev)
+  // Fallback: direct fetch for local development
   const baseUrl = getControlPlaneUrl().replace(/\/+$/, "");
   return fetch(`${baseUrl}${normalizedPath}`, fetchOptions);
 }

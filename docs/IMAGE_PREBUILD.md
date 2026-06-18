@@ -3,7 +3,7 @@
 Pre-built images make your sessions start faster. Instead of cloning your repository and installing
 dependencies every time you create a session, Open-Inspect keeps a ready-to-go snapshot of your repo
 that's refreshed automatically. New sessions start from this snapshot and only need to pull the
-latest commits — typically cutting startup from minutes to seconds.
+latest commits - typically cutting startup from minutes to seconds.
 
 ---
 
@@ -24,6 +24,8 @@ minutes of changes.
 
 ## Getting Started
 
+Pre-built images are available in the Modal sandbox deployment.
+
 ### Enable for a Repository
 
 1. Open **Settings > Images** in the web dashboard
@@ -32,20 +34,20 @@ minutes of changes.
 4. Optionally click the refresh button to trigger the first build immediately
 
 That's it. Once enabled, images are rebuilt automatically every 30 minutes whenever new commits are
-pushed to the default branch. Your next session will use the pre-built image automatically — no
+pushed to the default branch. Your next session will use the pre-built image automatically - no
 changes to your workflow needed.
 
 ### What You'll See in the UI
 
 The Images settings page shows the status of each repository:
 
-- **Ready** (green) — A pre-built image is available. Shows the git commit it was built from, how
+- **Ready** (green) - A pre-built image is available. Shows the git commit it was built from, how
   long ago it was built, and how long the build took.
-- **Building** (amber, pulsing) — A build is currently in progress.
-- **Failed** (red) — The last build failed. Shows the error message. The system will retry on the
+- **Building** (amber, pulsing) - A build is currently in progress.
+- **Failed** (red) - The last build failed. Shows the error message. The system will retry on the
   next scheduled run.
-- **No image** — Image building is enabled but no build has completed yet.
-- **Disabled** — Image building is turned off for this repository.
+- **No image** - Image building is enabled but no build has completed yet.
+- **Disabled** - Image building is turned off for this repository.
 
 ---
 
@@ -70,8 +72,13 @@ The build process runs the same setup steps that a normal session would:
 2. Runs your `.openinspect/setup.sh` script (if you have one)
 3. Saves a snapshot of the resulting environment
 
-Everything your setup script installs — dependencies, build artifacts, caches — is captured in the
+Everything your setup script installs - dependencies, build artifacts, caches - is captured in the
 snapshot.
+
+When secret storage is configured, build sandboxes receive the merged global and repository secrets
+as environment variables. Repository secrets override global secrets with the same name. Treat these
+as build-time secrets only: do not echo them or write them into files, caches, or artifacts, because
+the filesystem snapshot is reused by later sessions.
 
 ### What Happens When You Start a Session
 
@@ -95,12 +102,12 @@ from starting a session.
 The more work you front-load into your `.openinspect/setup.sh`, the faster your sessions start. Here
 are some tips:
 
-- **Install all dependencies** — `npm install`, `pip install -r requirements.txt`, `bundle install`,
+- **Install all dependencies** - `npm install`, `pip install -r requirements.txt`, `bundle install`,
   etc.
-- **Run build steps** — `npm run build`, `cargo build`, code generation, compiled assets
-- **Warm caches** — Running your test suite once during setup means cached files are available for
+- **Run build steps** - `npm run build`, `cargo build`, code generation, compiled assets
+- **Warm caches** - Running your test suite once during setup means cached files are available for
   subsequent runs in the session
-- **Pre-download large resources** — Models, datasets, or any large files the agent might need
+- **Pre-download large resources** - Models, datasets, or any large files the agent might need
 
 Don't worry about build duration. Builds run in the background and users always get the last
 _successfully_ built image. A 10-minute build is worthwhile if it saves 10 minutes on every session
@@ -114,10 +121,10 @@ start.
 
 Check the error message shown in the Images settings page. Common causes:
 
-- **Setup script errors** — Your `.openinspect/setup.sh` is failing. Test it locally or check the
+- **Setup script errors** - Your `.openinspect/setup.sh` is failing. Test it locally or check the
   script for commands that might not work in the sandbox environment (Debian Linux with Node.js,
   Python, and common dev tools).
-- **Timeout** — Builds have a 30-minute limit. If your setup takes longer, look for ways to optimize
+- **Timeout** - Builds have a 30-minute limit. If your setup takes longer, look for ways to optimize
   it (e.g., use faster package managers, reduce dependencies).
 
 The system automatically retries on the next scheduled run, so transient failures (network issues,

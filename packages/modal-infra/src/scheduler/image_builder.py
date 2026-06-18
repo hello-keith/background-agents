@@ -25,6 +25,8 @@ import json
 import os
 import subprocess
 import time
+from collections.abc import Iterable
+from typing import Any, cast
 
 import httpx
 import modal
@@ -45,6 +47,12 @@ log = get_logger("image_builder")
 CALLBACK_MAX_RETRIES = 3
 CALLBACK_BACKOFF_BASE = 2  # seconds: 2, 4, 8
 
+# Build log errors are surfaced through callbacks; keep them concise.
+BUILD_FAILURE_MESSAGE_MAX_CHARS = 500
+
+_SETUP_FAILURE_EVENTS = {"setup.failed", "setup.timeout", "setup.error"}
+_SUPERVISOR_FAILURE_EVENTS = {"supervisor.error", "supervisor.fatal"}
+
 
 class BuildError(Exception):
     """Raised when a build sandbox fails."""
@@ -52,7 +60,35 @@ class BuildError(Exception):
     pass
 
 
-async def _terminate_build_sandbox(handle, build_id: str, reason: str) -> bool:
+def _format_build_failure_event(
+    entry: dict[str, Any], redact_values: Iterable[str] = ()
+) -> str | None:
+    """Return a concise build failure message from a structured log entry."""
+    event = entry.get("event")
+    if not isinstance(event, str):
+        return None
+    if event not in _SETUP_FAILURE_EVENTS | _SUPERVISOR_FAILURE_EVENTS:
+        return None
+
+    if event in {"setup.failed", "setup.timeout"}:
+        raw_message = entry.get("output_tail")
+    else:
+        raw_message = entry.get("error_message") or entry.get("error")
+
+    message = raw_message.strip() if isinstance(raw_message, str) else ""
+    for redact_value in sorted({value for value in redact_values if value}, key=len, reverse=True):
+        message = message.replace(redact_value, "***")
+
+    if event in {"setup.failed", "setup.timeout"}:
+        if not message and entry.get("exit_code") is not None:
+            message = f"exit_code={entry['exit_code']}"
+
+    if not message:
+        return event
+    return f"{event}: {message[-BUILD_FAILURE_MESSAGE_MAX_CHARS:]}"
+
+
+async def _terminate_build_sandbox(handle: Any, build_id: str, reason: str) -> bool:
     """Terminate a build sandbox, logging but not failing the build on cleanup errors."""
     try:
         await handle.modal_sandbox.terminate.aio()
@@ -78,7 +114,7 @@ def _outbound_secret() -> str:
 
 async def _callback_with_retry(
     url: str,
-    payload: dict,
+    payload: dict[str, Any],
     secret: str | None = None,
 ) -> bool:
     """
@@ -145,47 +181,63 @@ def _generate_clone_token() -> str:
         installation_id = os.environ.get("GITHUB_APP_INSTALLATION_ID")
 
         if app_id and private_key and installation_id:
-            return generate_installation_token(
+            token = generate_installation_token(
                 app_id=app_id,
                 private_key=private_key,
                 installation_id=installation_id,
             )
+            return token if isinstance(token, str) else ""
     except Exception as e:
         log.warn("github.token_error", error=str(e))
     return ""
 
 
-async def _stream_build_logs(sandbox) -> tuple[str, bool]:
+async def _stream_build_logs(
+    sandbox: Any, redact_values: Iterable[str] = ()
+) -> tuple[str, bool, str | None]:
     """
     Stream sandbox stdout and extract build results.
 
     The entrypoint logs structured JSON lines. We look for:
     - event="git.sync_complete" with "head_sha" field
     - event="image_build.complete" to know the build finished
+    - setup/supervisor errors to preserve the actual build failure
 
     The sandbox stays alive after logging image_build.complete (it awaits
     shutdown_event), so we can snapshot_filesystem() while it's still running.
 
     Returns:
-        (head_sha, build_complete) tuple. head_sha is empty string if not found.
+        (head_sha, build_complete, error_message) tuple. head_sha is empty string if not found.
     """
     head_sha = ""
+    setup_error: str | None = None
+    supervisor_error: str | None = None
+    redact_values = tuple(redact_values)
     try:
         async for line in sandbox.stdout:
-            if "git.sync_complete" not in line and "image_build.complete" not in line:
-                continue
             try:
                 entry = json.loads(line)
-                event = entry.get("event", "")
-                if event == "git.sync_complete" and entry.get("head_sha"):
-                    head_sha = entry["head_sha"]
+                if not isinstance(entry, dict):
+                    continue
+                event = entry.get("event")
+                if not isinstance(event, str):
+                    continue
+                head_sha_value = entry.get("head_sha")
+                if event == "git.sync_complete" and isinstance(head_sha_value, str):
+                    head_sha = head_sha_value
                 elif event == "image_build.complete":
-                    return head_sha, True
+                    return head_sha, True, None
+
+                failure_message = _format_build_failure_event(entry, redact_values)
+                if failure_message and event in _SETUP_FAILURE_EVENTS and setup_error is None:
+                    setup_error = failure_message
+                elif failure_message and supervisor_error is None:
+                    supervisor_error = failure_message
             except json.JSONDecodeError:
                 continue
     except Exception as e:
         log.warn("build.stream_error", error=str(e))
-    return head_sha, False
+    return head_sha, False, setup_error or supervisor_error
 
 
 @app.function(
@@ -248,9 +300,15 @@ async def build_repo_image(
         )
 
         # 3. Stream stdout until build completes (sandbox stays alive for snapshotting)
-        base_sha, build_complete = await _stream_build_logs(handle.modal_sandbox)
+        redact_values = (clone_token, *((user_env_vars or {}).values()))
+        base_sha, build_complete, build_error = await _stream_build_logs(
+            handle.modal_sandbox,
+            redact_values=redact_values,
+        )
         if not build_complete:
             exit_code = handle.modal_sandbox.returncode
+            if build_error:
+                raise BuildError(f"Build sandbox exited without completing: {build_error}")
             raise BuildError(f"Build sandbox exited without completing (exit_code={exit_code})")
 
         # 4. Snapshot the running sandbox's filesystem
@@ -326,7 +384,7 @@ FAILED_BUILD_CLEANUP_SECONDS = 86400  # 24 hours
 async def _api_get(
     url: str,
     secret: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """GET a control plane endpoint with HMAC auth."""
     if secret is None:
         secret = _outbound_secret()
@@ -337,14 +395,14 @@ async def _api_get(
             headers={"Authorization": f"Bearer {token}"},
         )
         response.raise_for_status()
-        return response.json()
+        return cast("dict[str, Any]", response.json())
 
 
 async def _api_post(
     url: str,
-    payload: dict | None = None,
+    payload: dict[str, Any] | None = None,
     secret: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """POST to a control plane endpoint with HMAC auth."""
     if secret is None:
         secret = _outbound_secret()
@@ -359,7 +417,7 @@ async def _api_post(
             },
         )
         response.raise_for_status()
-        return response.json()
+        return cast("dict[str, Any]", response.json())
 
 
 def _git_ls_remote_sha(
@@ -417,7 +475,7 @@ def _should_rebuild(
     repo_owner: str,
     repo_name: str,
     remote_sha: str,
-    all_images: list[dict],
+    all_images: list[dict[str, Any]],
 ) -> bool:
     """
     Determine if a repo needs a rebuild based on current image status.
@@ -478,7 +536,7 @@ def _should_rebuild(
     secrets=[internal_api_secret, github_app_secrets],
     timeout=300,  # 5 min — scheduler itself is fast, builds run async
 )
-async def rebuild_repo_images():
+async def rebuild_repo_images() -> None:
     """
     Every 30 minutes:
     1. Fetch list of repos with image building enabled from control plane
@@ -500,7 +558,7 @@ async def rebuild_repo_images():
     try:
         # 1. Get enabled repos
         enabled_data = await _api_get(f"{control_plane_url}/repo-images/enabled-repos")
-        enabled_repos: list[dict] = enabled_data.get("repos", [])
+        enabled_repos = cast("list[dict[str, Any]]", enabled_data.get("repos", []))
 
         if not enabled_repos:
             log.info("scheduler.no_enabled_repos")
@@ -508,7 +566,7 @@ async def rebuild_repo_images():
 
         # 2. Get current image status (all repos)
         status_data = await _api_get(f"{control_plane_url}/repo-images/status")
-        all_images: list[dict] = status_data.get("images", [])
+        all_images = cast("list[dict[str, Any]]", status_data.get("images", []))
 
         # 3. Generate GitHub App token for ls-remote
         clone_token = _generate_clone_token()
