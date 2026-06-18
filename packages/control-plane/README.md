@@ -69,6 +69,7 @@ The control plane provides:
 | `/sessions/:id/media`                    | POST      | Upload sandbox media artifact  |
 | `/sessions/:id/media/:artifactId`        | GET       | Stream media artifact          |
 | `/sessions/:id/children`                 | GET       | List child sessions            |
+| `/sessions/:id/children`                 | POST      | Spawn child session            |
 | `/sessions/:id/children/:childId`        | GET       | Get child session details      |
 | `/sessions/:id/children/:childId/cancel` | POST      | Cancel child session           |
 | `/sessions/:id/pr`                       | POST      | Create pull request            |
@@ -84,11 +85,34 @@ query parameters. `createdBy` values must be canonical 32-character lowercase he
 duplicates are ignored. The web `/api/sessions` proxy also accepts `createdBy=me` and resolves it to
 the current user's canonical ID before forwarding. The control-plane endpoint rejects `me` directly.
 
+`POST /sessions` requires internal control-plane authentication and accepts JSON with required
+`repoOwner` and `repoName`, plus optional `title`, `branch`, `model`, and `reasoningEffort`. Web
+clients identify the signed-in user with provider-agnostic `authProvider` (`github` or `google`),
+`authUserId`, `authEmail`, `authName`, and `authAvatarUrl` fields. GitHub SCM attribution and OAuth
+tokens remain GitHub-only `scm*` fields (`scmUserId`, `scmLogin`, `scmName`, `scmEmail`,
+`scmAvatarUrl`, `scmToken`, `scmRefreshToken`, `scmTokenExpiresAt`). Bot-created sessions use
+`spawnSource` with GitHub `scm*` fields or Slack/Linear `actor*` fields. Google auth fields are
+never used as SCM credentials; if the resolved canonical user has a linked GitHub identity, the
+control plane may fill missing GitHub SCM fields from that identity, otherwise git falls back to the
+GitHub App. The response is `{ sessionId, status }` with status `201`; invalid JSON, missing repo
+fields, or invalid branch names return `400`, uninstalled repos return `404`, and setup failures
+return `500`.
+
 `PATCH /sessions/:id/title` requires internal control-plane authentication and accepts JSON with
 `userId` and `title`. `userId` must identify a session participant. Titles are trimmed, must be
 non-empty, and must be 200 characters or fewer. The endpoint returns `{ title }`, returns `400` for
 invalid request data, returns `403` when the user is not a participant, and returns `404` when the
 session is missing. Successful updates broadcast `session_title` to connected clients.
+
+`POST /sessions/:id/children` accepts internal control-plane authentication or the parent sandbox
+bearer token. The JSON body requires `title` and `prompt`; `model`, `reasoningEffort`, `repoOwner`,
+and `repoName` are optional. Child sessions always run in the parent's repository. Optional repo
+fields are accepted only when they match the parent repo; otherwise the route returns `403`. The
+child inherits the parent model and reasoning effort unless valid overrides are supplied, inherits
+GitHub SCM attribution and credentials from the parent session, applies repo sandbox settings, and
+enqueues `prompt` as the first child prompt. Spawning is limited by depth and repo child-session
+settings, returning `403` when max depth is exceeded and `429` when concurrent or total child limits
+are reached. The response is `{ sessionId, status }` with status `201`.
 
 `GET /sessions/:id/children/:childId` accepts `include=result` for the final assistant response and
 `include=trajectory` for persisted events. Use `trajectoryLimit` and `trajectoryCursor` to page
