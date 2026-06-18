@@ -54,6 +54,19 @@ Start by choosing a **Trigger Type**. The rest of the form adjusts based on that
 
 For non-schedule automations, schedule fields are not used.
 
+Supported GitHub event types:
+
+| Event Type                                  | Description                              |
+| ------------------------------------------- | ---------------------------------------- |
+| `pull_request.opened`                       | A pull request was opened                |
+| `pull_request.synchronize`                  | New commits were pushed to a PR          |
+| `pull_request.closed`                       | A pull request was closed or merged      |
+| `issue_comment.created`                     | A comment was added to an issue or PR    |
+| `pull_request_review_comment.created`       | A review comment was added to a PR       |
+| `check_suite.completed`                     | A CI check suite finished running        |
+| `issues.opened`                             | An issue was opened                      |
+| `issues.labeled`                            | A label was added to an issue            |
+
 ---
 
 ## Inbound Webhooks

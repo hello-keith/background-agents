@@ -254,6 +254,47 @@ payload is malformed. Responses use `Cache-Control: no-store`.
 | `/repos/:owner/:name/secrets`      | PUT    | Upsert secrets       |
 | `/repos/:owner/:name/secrets/:key` | DELETE | Delete a secret      |
 
+### Repo Images
+
+Repo image routes are available when `SANDBOX_PROVIDER` resolves to Modal.
+
+| Endpoint                           | Method | Auth                         | Description                    |
+| ---------------------------------- | ------ | ---------------------------- | ------------------------------ |
+| `/repo-images/build-complete`      | POST   | Modal callback token         | Mark a build ready             |
+| `/repo-images/build-failed`        | POST   | Modal callback token         | Mark a build failed            |
+| `/repo-images/trigger/:owner/:name` | POST   | Internal control-plane token | Start a repo image build       |
+| `/repo-images/status`              | GET    | Internal control-plane token | List all build statuses        |
+| `/repo-images/toggle/:owner/:name` | PUT    | Internal control-plane token | Enable or disable repo builds  |
+| `/repo-images/enabled-repos`       | GET    | Internal control-plane token | List repos enabled for builds  |
+| `/repo-images/mark-stale`          | POST   | Internal control-plane token | Fail old building rows         |
+| `/repo-images/cleanup`             | POST   | Internal control-plane token | Delete old failed build rows   |
+
+The callback routes are exempt from the worker's regular internal-auth gate, but still require
+`Authorization: Bearer <token>` signed with `INTERNAL_CALLBACK_SECRET`. Other repo-image routes use
+the normal internal control-plane token.
+
+`POST /repo-images/build-complete` accepts `build_id`, `provider_image_id`, optional `base_sha`, and
+optional `build_duration_seconds`. It marks the build ready and returns
+`{ ok: true, replacedImageId }`. When a ready image replaces an older provider image, the control
+plane asks Modal to delete the replaced `provider_image_id` on a best-effort basis.
+
+`POST /repo-images/build-failed` accepts `build_id` and optional `error`, marks the build failed,
+and returns `{ ok: true }`.
+
+`POST /repo-images/trigger/:owner/:name` registers a `modal` build, merges global and repo secrets
+for the build sandbox, then calls Modal `api-build-repo-image` with those values as `user_env_vars`.
+Repo secrets override global secrets with the same key. The response is `{ buildId, status }` with
+status `building`.
+
+`GET /repo-images/status` returns `{ images }` for all builds or for one repo when `repo_owner` and
+`repo_name` query parameters are supplied. `PUT /repo-images/toggle/:owner/:name` accepts
+`{ enabled: boolean }` and stores whether scheduled image builds are enabled for that repo.
+
+`GET /repo-images/enabled-repos`, `POST /repo-images/mark-stale`, and `POST /repo-images/cleanup`
+are used by the Modal scheduler. `mark-stale` accepts optional `max_age_seconds` and returns
+`{ ok: true, markedFailed }`; `cleanup` accepts optional `max_age_seconds` and returns
+`{ ok: true, deleted }`.
+
 ## WebSocket Protocol
 
 ### Client → Server Messages

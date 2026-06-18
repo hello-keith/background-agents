@@ -9,7 +9,7 @@ This package provides the data plane for Open-Inspect:
 - **Sandboxes**: Isolated development environments running OpenCode
 - **Images**: Pre-built container images with all development tools
 - **Snapshots**: Filesystem snapshots for fast startup and session persistence
-- **Scheduler**: Image rebuilding infrastructure (currently disabled)
+- **Scheduler**: Image rebuilding infrastructure for repositories with pre-builds enabled
 
 ## Architecture
 
@@ -57,7 +57,7 @@ Base image definition with:
 
 ### Scheduler (`src/scheduler/`)
 
-- **image_builder.py**: Image rebuild infrastructure (scheduling currently disabled)
+- **image_builder.py**: Repo image build workers and the 30-minute rebuild scheduler
 
 ## Usage
 
@@ -90,6 +90,7 @@ modal secret create github-app \
 modal secret create internal-api \
   MODAL_API_SECRET="$(openssl rand -hex 32)" \
   INTERNAL_CALLBACK_SECRET="<terraform-internal-callback-secret>" \
+  CONTROL_PLANE_URL="https://your-control-plane.workers.dev" \
   ALLOWED_CONTROL_PLANE_HOSTS="your-control-plane.workers.dev"
 ```
 
@@ -141,6 +142,8 @@ environment; the web suffix only controls endpoint hostnames.
 | `api-warm-sandbox` | POST | Yes | Pre-warm a sandbox |
 | `api-snapshot-sandbox` | POST | Yes | Take filesystem snapshot |
 | `api-restore-sandbox` | POST | Yes | Restore sandbox from snapshot |
+| `api-build-repo-image` | POST | Yes | Start an async repo image build |
+| `api-delete-provider-image` | POST | Yes | Best-effort cleanup for a replaced provider image |
 
 ### Example: Create Sandbox
 
@@ -164,6 +167,51 @@ curl "https://${WORKSPACE_SLUG}--open-inspect-api-health.modal.run"
 # {"success": true, "data": {"status": "healthy", "service": "open-inspect-modal"}}
 ```
 
+### Repo Image Builds
+
+`api-build-repo-image` starts an async image build and returns immediately:
+
+```json
+{
+  "repo_owner": "your-org",
+  "repo_name": "your-repo",
+  "default_branch": "main",
+  "build_id": "img-your-org-your-repo-1730000000000",
+  "callback_url": "https://your-control-plane.workers.dev/repo-images/build-complete",
+  "user_env_vars": {
+    "EXAMPLE_SECRET": "value"
+  }
+}
+```
+
+`user_env_vars` is optional and comes from the control plane's merged global and repo secrets for
+the build sandbox. The response is:
+
+```json
+{
+  "success": true,
+  "data": {
+    "build_id": "img-your-org-your-repo-1730000000000",
+    "status": "building"
+  }
+}
+```
+
+The build worker snapshots the completed filesystem and posts the result to `callback_url`. Failures
+are posted to the matching `/repo-images/build-failed` callback.
+
+`api-delete-provider-image` accepts `{ "provider_image_id": "..." }` and returns the requested ID
+with `deleted: true`. Modal images are garbage-collected when they are no longer referenced, so this
+endpoint records the cleanup request for auditability.
+
+### Scheduled Rebuilds
+
+`rebuild_repo_images` runs every 30 minutes. It reads enabled repositories from the control plane,
+checks the current GitHub `main` SHA, triggers builds when the latest ready image is stale, marks old
+building rows as failed, and deletes old failed rows. It requires `CONTROL_PLANE_URL` in the
+`internal-api` secret; Terraform injects this value during deployment. Without it, the scheduler logs
+`scheduler.no_control_plane_url` and exits.
+
 ## Environment Variables
 
 Set via Modal secrets:
@@ -176,6 +224,7 @@ Set via Modal secrets:
 | `GITHUB_APP_INSTALLATION_ID` | `github-app` | GitHub App installation ID |
 | `MODAL_API_SECRET` | `internal-api` | Shared secret for control plane auth |
 | `INTERNAL_CALLBACK_SECRET` | `internal-api` | Shared secret for Modal to sign control plane callbacks; must match control plane `INTERNAL_CALLBACK_SECRET` |
+| `CONTROL_PLANE_URL` | `internal-api` | Control-plane base URL used by scheduled repo image rebuilds |
 | `ALLOWED_CONTROL_PLANE_HOSTS` | `internal-api` | Comma-separated allowed hostnames for URL validation |
 
 ## Verification Criteria
