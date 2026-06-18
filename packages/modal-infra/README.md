@@ -145,6 +145,25 @@ environment; the web suffix only controls endpoint hostnames.
 | `api-build-repo-image` | POST | Yes | Start an async repo image build |
 | `api-delete-provider-image` | POST | Yes | Best-effort cleanup for a replaced provider image |
 
+### Sandbox Payloads
+
+`api-create-sandbox` requires `session_id`, `repo_owner`, `repo_name`, `control_plane_url`, and
+`sandbox_auth_token`. Optional fields are `sandbox_id`, `snapshot_id`, `opencode_session_id`,
+`provider`, `model`, `timeout_seconds`, `branch`, `user_env_vars`, `repo_image_id`,
+`repo_image_sha`, `code_server_enabled`, `agent_slack_notify_enabled`, `mcp_servers`, and
+`sandbox_settings`.
+
+`api-restore-sandbox` requires `snapshot_image_id`, `session_config`, `sandbox_id`,
+`control_plane_url`, and `sandbox_auth_token`. `session_config` carries `session_id`, `repo_owner`,
+`repo_name`, `provider`, `model`, and optional `branch` and `mcp_servers`. Optional top-level fields
+are `timeout_seconds`, `user_env_vars`, `code_server_enabled`, `agent_slack_notify_enabled`, and
+`sandbox_settings`.
+
+`sandbox_settings` may include `terminalEnabled`, `tunnelPorts`, `cpuCores`, and `memoryMib`.
+`cpuCores` maps to Modal CPU cores and `memoryMib` maps to Modal memory in MiB. Both sandbox
+endpoints return `sandbox_id`, `modal_object_id`, `status`, and any `code_server_url`,
+`code_server_password`, `ttyd_url`, or `tunnel_urls` created for the sandbox.
+
 ### Example: Create Sandbox
 
 ```bash

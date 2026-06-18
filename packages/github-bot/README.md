@@ -113,7 +113,7 @@ access model and can authenticate auxiliary private GitHub repos reachable by th
 | Event                         | Action             | Trigger                     | Handler                   |
 | ----------------------------- | ------------------ | --------------------------- | ------------------------- |
 | `pull_request`                | `opened`           | Non-draft PR opened         | `handlePullRequestOpened` |
-| `pull_request`                | `review_requested` | Compatibility event path    | `handleReviewRequested`   |
+| `pull_request`                | `review_requested` | Manual reviewer request     | `handleReviewRequested`   |
 | `issue_comment`               | `created`          | @mention in a PR comment    | `handleIssueComment`      |
 | `pull_request_review_comment` | `created`          | @mention in a review thread | `handleReviewComment`     |
 
@@ -139,8 +139,9 @@ normalization.
 
 **Review Requested (compatibility path):**
 
-This handler is retained for webhook compatibility. The user-facing GitHub workflow does not ask
-people to request the GitHub App bot through the PR reviewer picker.
+Assigning the GitHub App bot through the PR reviewer picker is supported for manual review
+requests. It remains a compatibility path; auto-review and `@mention` comments are the recommended
+day-to-day workflows.
 
 1. Check `requested_reviewer.login` matches `GITHUB_BOT_USERNAME` — return early if not
 2. Post eyes reaction on the PR (fire-and-forget)

@@ -30,13 +30,15 @@ Create `terraform/environments/production/terraform.tfvars` from `terraform.tfva
 in:
 
 - Cloudflare account, API token, and Workers subdomain
-- Modal token, workspace, environment, and internal API secret
+- Modal token, workspace, environment, and `modal_api_secret`
+- `deployment_name`
 - GitHub OAuth client credentials
 - optional Google OAuth credentials, `google_client_id` and `google_client_secret`, if enabling
   Google login
 - GitHub App ID, private key, and installation ID for repository access
 - Anthropic API key
-- encryption and callback secrets
+- encryption, callback, and auth secrets: `token_encryption_key`, `repo_secrets_encryption_key`,
+  `internal_callback_secret`, and `nextauth_secret`
 - at least one access-control allowlist, either `allowed_users`, `allowed_email_domains`, or
   `allowed_emails`
 
